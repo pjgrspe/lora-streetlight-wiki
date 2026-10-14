@@ -1,87 +1,105 @@
 # Index
 
-Master index for the LORA wiki, a knowledge base for the 128-light LoRa smart street lighting system (Philippines). **Since 2026-10-14, pgorospe's scope is the Local Monitoring Server, the Master Gateway and the three Slave Gateways**, plus the LoRa protocol at both tiers. The device side (energy meter, LED driver/monitoring device) belongs to one other developer. Every topic note links back here.
+Knowledge base for a LoRa smart street lighting system in the Philippines: a **Local Monitoring Server**, a **Master LoRa Gateway**, one **Slave LoRa Gateway per section**, and per-pole **LoRa LED driver / monitoring devices** that control the lights over DALI.
 
-> **2026-10-14 revision:** dual radios master↔slave, 4 radios per slave, ~50 devices per slave (apparently per-pole), Modbus on RS485, SX1276 on STM32. Start with [[System-Architecture-As-Diagrammed]] → [[Dual-Radio-Redundancy-And-Coexistence]] → [[Slave-Cell-Capacity-And-Scheduling]]. Notes predating this carry an **Updated/Superseded 2026-10-14** callout at the top.
+## The system in one picture
 
-**Start with [[Master-LoRa-Gateway-Role]]** if you're new to the project, or **[[Open-Questions]]** if you want to know what's still undecided.
+```
+Local Monitoring Server ──RS485 / Modbus RTU──► MASTER GATEWAY (2 radios: primary + standby)
+                                                   │ LoRa tier 1
+                               ┌───────────────────┼───────────────────┐
+                          SLAVE GATEWAY       SLAVE GATEWAY       SLAVE GATEWAY …   one per section,
+                          (4 radios)                                                count TBC
+                               │ LoRa tier 2 — 2 channels, both active
+                          up to 60 devices per section: per-pole LED driver/monitoring devices
+                          + 1 energy meter ──DALI──► luminaire
+```
 
-## How to use this vault
+| Owner | Scope |
+|---|---|
+| **pgorospe** | Local Monitoring Server, Master Gateway, Slave Gateway firmware, the LoRa protocol (all tiers) |
+| Device developer | LoRa energy meter, LoRa LED driver & monitoring device (Blue Pill STM32F103 + SX1276) |
+| Hardware developer | Gateway hardware, built on STM32 dev boards + SX1276 modules |
 
-- One atomic concept per note — no "everything about X" notes.
-- Link liberally, including to notes that don't exist yet — a red `[[link]]` marks something worth writing later.
-- When new material supersedes a note, add a **Superseded** callout with the date and what changed. Don't silently overwrite history.
-- Note filenames are `Title-Case-With-Hyphens.md`, named after the concept, not the source it came from.
+## Start here
 
-## Project scope
+New to the project? Read these five, in order:
 
-- [[Team-And-Ownership]] — who owns what; pgorospe owns the server, master and slaves (rev 2026-10-14)
-- [[System-Architecture-As-Diagrammed]] — the literal contents of the architecture diagram, separated from interpretation
-- [[Master-LoRa-Gateway-Role]] — what this box is responsible for. **The single most important note.**
-- [[Open-Questions]] — everything unresolved, ranked. **Q1–Q5 could force a redesign.**
-- [[Development-Roadmap-And-Gates]] — phased plan with testable exit gates
+1. [[System-Architecture-As-Diagrammed]]: what the client drew, and how it's interpreted
+2. [[Master-LoRa-Gateway-Role]]: what the master does, and why it isn't "just a radio bridge"
+3. [[Fail-Safe-Lighting-Rule]]: the rule behind every failure decision (when in doubt, lights ON)
+4. [[Slave-Cell-Capacity-And-Scheduling]]: how one slave serves ~50 devices without a bottleneck
+5. [[Open-Questions]]: what's still undecided
 
-## Core architecture decisions
+## 1 · Project
 
-- [[Cache-Behind-Synchronous-Wire-Pattern]] — never block a Modbus read on a LoRa round trip
-- [[Asynchronous-Command-Job-Pattern]] — how commands work when they can't complete in a timeout
-- [[Slave-Gateways-As-Intelligent-Sub-Controllers]] — why the slaves get their own brains
-- [[Fail-Safe-Lighting-Rule]] — ambiguous failure resolves to LIGHTS ON
-- [[Popcorn-Effect-And-Scheduled-Execution]] — multicast + "execute at time T"
-- [[Device-Identity-Namespaces]] — UID vs logical address vs asset ID
-- [[Failure-Modes-And-Mitigations]] — FMEA, 15 failure modes
-- [[LoRa-For-Control-Critique]] — the honest case against LoRa here, and why this design survives it
-- [[Dual-Radio-Redundancy-And-Coexistence]] — what the paired radios buy, and why radios in one box blind each other (new 2026-10-14)
-- [[Slave-Cell-Capacity-And-Scheduling]] — serving ~54 devices per slave: scheduled uplink, not polling (new 2026-10-14)
+- [[Team-And-Ownership]]: who builds what, and the interface contracts between people
+- [[System-Architecture-As-Diagrammed]]: the client's diagram and its annotations
+- [[Open-Questions]]: open and resolved questions, ranked
+- [[Development-Roadmap-And-Gates]]: phases with testable exit gates
+- [[Philippines-Regulatory-Context]]: the radio band and limits we design to (915–918 MHz)
+- [[Philippines-Site-Context]]: grid, billing, climate
 
-## Radio and protocol
+## 2 · Architecture
 
-- [[LoRa-PHY-Fundamentals]] — CSS, spreading factor, coding rate, the header/CRC traps
-- [[LoRa-Airtime-Budget]] — time-on-air tables, the 400 ms dwell problem, the duty-cycle conflict
-- [[Link-Budget-And-Site-Survey]] — realistic ranges, Fresnel, and the survey protocol
-- [[LoRa-vs-LoRaWAN]] — what a custom MAC costs you, and when it's justified
-- [[Custom-Protocol-Frame-Design]] — addressing, frame format, ACK/retry, fragmentation
-- [[Media-Access-Control-Options]] — TDMA vs ALOHA vs CAD, and the recommended superframe
-- [[Custom-Protocol-Security]] — AES-CTR + CMAC, and the ten things custom protocols get wrong
-- [[Continuous-Receive-Downlink]] — why permanent receive is free on a mains-powered node
-- [[Philippines-Regulatory-Context]] — NTC, 915–918 MHz, and the biggest open risk
+- [[Master-LoRa-Gateway-Role]]: the master's responsibilities and non-responsibilities
+- [[Slave-Gateways-As-Intelligent-Sub-Controllers]]: why slaves run their own schedules
+- [[Fail-Safe-Lighting-Rule]]: five independent layers of "the road stays lit"
+- [[Cache-Behind-Synchronous-Wire-Pattern]]: never block a Modbus read on a radio round trip
+- [[Asynchronous-Command-Job-Pattern]]: how commands work over a slow radio
+- [[Popcorn-Effect-And-Scheduled-Execution]]: switching every light at the same instant
+- [[Device-Identity-Namespaces]]: hardware ID vs network address vs pole ID
+- [[Failure-Modes-And-Mitigations]]: the failure table (FMEA)
+- [[LoRa-For-Control-Critique]]: the honest case against LoRa, and how this design answers it
 
-## Gateway hardware
+## 3 · Radio and protocol
 
-- [[STM32-Part-Selection]] — STM32WLE5 vs the G0B1 fallback; flash/RAM budget. **Now: common STM32 + external SX1276 board (2026-10-14)**
-- [[Radio-Hardware-Selection]] — SX1262 vs SX1276, TCXO, modules vs bare chip. **Client chose SX1276 (2026-10-14)**
-- [[RS485-Hardware-Design]] — isolation, termination, fail-safe bias, DE timing
-- [[Enclosure-Power-And-Surge]] — mains, lightning, humidity, coax loss
+- [[LoRa-PHY-Fundamentals]]: spreading factor, bandwidth, the basics
+- [[LoRa-Airtime-Budget]]: time on air, the 400 ms limit, duty cycle
+- [[Link-Budget-And-Site-Survey]]: realistic range and how to survey
+- [[LoRa-vs-LoRaWAN]]: why a custom protocol
+- [[Custom-Protocol-Frame-Design]]: addressing, frame format, ACK and retry
+- [[Media-Access-Control-Options]]: TDMA vs ALOHA vs CAD
+- [[Slave-Cell-Capacity-And-Scheduling]]: the time-slotted device network per section
+- [[Dual-Radio-Redundancy-And-Coexistence]]: what paired radios buy, and why radios in one box blind each other
+- [[Continuous-Receive-Downlink]]: why mains-powered nodes listen all the time
+- [[Custom-Protocol-Security]]: message authentication, replay protection, keys
 
-## Gateway firmware
+## 4 · Gateway hardware
 
-- [[Firmware-Architecture]] — FreeRTOS task decomposition, the DMA receive path, layering
-- [[Modbus-Register-Map-Design]] — the contract with the monitoring server
-- [[Persistence-And-Storage]] — the flash ECC trap, FRAM, LittleFS
-- [[Time-Distribution-And-Clock-Trust]] — RTC, beacons, and the local astronomical clock
-- [[Watchdog-And-Fault-Recovery]] — IWDG discipline, crash capture, escalation ladder
-- [[Firmware-Update-Over-LoRa]] — NOR staging, signing, and whether OTA is feasible
-- [[Gateway-Observability]] — what a field technician needs to see
-- [[Development-Tooling]] — build, test, HIL fixture, logging
+- [[STM32-Part-Selection]]: gateway board (NUCLEO-L476RG) and device platform (Blue Pill) constraints
+- [[Radio-Hardware-Selection]]: SX1276 modules, antennas, supply risk
+- [[RS485-Hardware-Design]]: isolation, termination, bias, timing
+- [[Enclosure-Power-And-Surge]]: lightning, humidity, coax loss
 
-## Downstream domain
+## 5 · Gateway firmware
 
-- [[DALI-Fundamentals]] — bus, addressing, commands, the dimming curve, timing limits
-- [[DALI-Bus-Length-Constraint]] — why one bus per section can't work, and the fork it creates
-- [[DALI-Telemetry-And-D4i]] — Parts 251/252/253, and the D4i procurement decision
-- [[Energy-Metering-And-Telemetry-Contract]] — what to measure and the three fault-detection layers
-- [[Street-Lighting-Control-Logic]] — astro clock, dimming profiles, and measured vs modelled savings
-- [[Northbound-Interface-Options]] — Modbus, MQTT, TALQ, and the server stack
+- [[Firmware-Architecture]]: RTOS tasks, the receive path, layering
+- [[Modbus-Register-Map-Design]]: the contract between gateway and server
+- [[Persistence-And-Storage]]: flash traps, FRAM, journalling
+- [[Time-Distribution-And-Clock-Trust]]: RTC, beacons, the astronomical clock
+- [[Watchdog-And-Fault-Recovery]]: watchdog discipline and recovery
+- [[Firmware-Update-Over-LoRa]]: update paths and their limits
+- [[Gateway-Observability]]: what a field technician can see
+- [[Development-Tooling]]: build, test, debug, bench fixture
 
-## Local Monitoring Server
+## 6 · Local Monitoring Server
 
-- [[Local-Monitoring-Server-Design]] — poller, historian, dashboard, control; recommended stack (new 2026-10-14)
+- [[Local-Monitoring-Server-Design]]: poller, database, dashboard, control
+- [[Northbound-Interface-Options]]: Modbus now; MQTT/TALQ later as bridges
 
-## Operations
+## 7 · Devices and DALI
 
-- [[Commissioning-And-Field-Swap]] — join model, site survey, the 10-minute device swap
-- [[Philippines-Site-Context]] — grid, billing model, environment
+- [[DALI-Fundamentals]]: the bus, addressing, commands, timing
+- [[DALI-Bus-Length-Constraint]]: why the system went per-pole
+- [[DALI-Telemetry-And-D4i]]: what existing drivers can and can't report
+- [[Energy-Metering-And-Telemetry-Contract]]: what to measure, and fault detection
+- [[Street-Lighting-Control-Logic]]: astronomical schedules, dimming, savings
+- [[Commissioning-And-Field-Swap]]: installing, mapping and replacing devices
 
-## Conventions
+## How notes are written
 
-Every note opens with a one-line definition, then detail, then `## Related` wikilinks, then a link back here. Source attribution goes in a `## Sources` section at the bottom with the date, so a claim can be traced. **Uncertainty is flagged inline with ⚠ rather than smoothed over** — a lot of this project is still unknown, and the notes should say so.
+- One topic per note. Each opens with a short summary and **Key points**, then detail, **Related**, **Sources**, and a short **History** of what changed.
+- Notes describe the **current** design. Earlier decisions are kept as one-line History entries, not as banners at the top.
+- **⚠ marks a claim that isn't verified yet.** Treat it as a work item.
+- Commercial terms (price, hours) live in the Statement of Work in `Output/`, not in this wiki.
