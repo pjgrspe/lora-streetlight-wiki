@@ -1,5 +1,13 @@
 # Philippines Regulatory Context (Radio)
 
+> **Decision 2026-10-14: the project designs to this note's Philippine envelope.** Working radio profile for all gateways and devices:
+> - **Band: 915–918 MHz** (NTC NRFAT allocation; LoRa Alliance AS923-3 for the Philippines). Not 868 MHz, not US 902–928 MHz, not 433 MHz.
+> - **125 kHz channels**, on a 200 kHz raster inside 915–918 MHz (~15 channels). Tier-1 uses 2 channels at opposite band edges, and each section uses 2 more ([[Dual-Radio-Redundancy-And-Coexistence]]).
+> - **≤16 dBm EIRP** (antenna gain counts, so PA output is set in firmware below that). **≤400 ms per transmission** (SF7–SF10 only; SF11/SF12 are unusable). **≤1% duty cycle**, accounted **per box**.
+> - Band, channel plan and TX power are **configuration parameters** with a compile-time regional ceiling, so a different NTC answer is a config change, not a rewrite.
+>
+> ⚠ **What this does *not* settle:** whether 915–918 MHz is licence-exempt or needs a station licence, and NTC's actual EIRP/duty/dwell figures. The letter to NTC in "Actions" below is **still required**. The older interim assumption of a 916.5–917.0 MHz core is replaced by the full 915–918 MHz band, which the multi-channel design needs.
+
 **This is the highest-uncertainty, highest-consequence open item in the project.** It affects the antenna, the RF matching network, the PHY parameters, and the entire airtime budget. Resolve it before any hardware commit.
 
 ## What is verified

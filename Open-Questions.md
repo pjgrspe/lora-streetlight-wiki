@@ -14,7 +14,9 @@ Status key: 🔴 blocking · 🟡 needed soon · 🟢 can wait · ✅ resolved
 
 **How to resolve:** write to NTC Equipment Standards Division (`equipment.standard@ntc.gov.ph`) asking in writing for the circular text, the licensing status, the EIRP/duty/dwell limits, and whether AS923-3 is accepted as a compliance profile.
 
-**Interim assumption:** 916.5–917.0 MHz, 125 kHz, ≤16 dBm EIRP, ≤1% duty cycle, ≤400 ms per transmission.
+**Decision 2026-10-14:** design to the Philippine envelope in [[Philippines-Regulatory-Context]]: **915–918 MHz**, 125 kHz channels, ≤16 dBm EIRP, ≤1% duty cycle (per box), ≤400 ms per transmission. Q1 stays 🔴 only for **licensing status and NTC's confirmed limits**, which still need the NTC letter.
+
+*Earlier interim assumption (superseded):* 916.5–917.0 MHz, 125 kHz, ≤16 dBm EIRP, ≤1% duty cycle, ≤400 ms per transmission.
 
 → [[Philippines-Regulatory-Context]]
 
