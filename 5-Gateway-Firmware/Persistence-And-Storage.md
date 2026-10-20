@@ -16,8 +16,9 @@ What the gateway stores, where, and how it survives a power cut mid-write. The b
 |---|---|---|---|
 | Bootloader + app image | rare | **internal flash** | Execute in place |
 | Config: unit ID, RF channel plan, lat/long, schedules, device registry, slot table (Slave) | commissioning / on change | **internal flash, 2-page ping-pong** (or FRAM, see the bank-swap trap) | No extra parts |
-| Energy totalizers, burn hours, boot count, health counters, frame-counter high-water marks | every few seconds | **FRAM** | 10¹² endurance, byte-writable, no erase |
-| Event/fault log, outage history buffer | continuous | **SPI NOR + LittleFS** | Cheap capacity |
+| Energy totalizers, burn hours, boot count, health counters, frame-counter high-water marks (every 64 frames) | every few seconds | **FRAM** | 10¹² endurance, byte-writable, no erase |
+| **Slave device table:** UID → NodeID, slot, home channel, session keys, frame counters, plus the `CellKey` and join nonce | on join / every frame | **FRAM** | A slave reboot must not force 60 devices to rejoin or re-key |
+| Event buffer (≥ 1000 events on a slave, 2000 on the Master), section summaries for 7 days, logs | continuous | **SPI NOR + LittleFS** (or FRAM for the event ring) | Survives reboot; replayed oldest first on reconnect |
 | OTA staging image (if used) | per update | **SPI NOR, raw sectors**, optional with dual-bank flash | See [[Firmware-Update-Over-LoRa]] |
 | Live telemetry cache | continuous | **RAM only** | It's a cache; it rebuilds from downstream reports after boot |
 
@@ -59,7 +60,7 @@ Decide this together with the update design in [[Firmware-Update-Over-LoRa]].
 - **FRAM: `MB85RS256B`** (256 kbit, SPI, **10¹² cycles, no erase**). The correct part for a totalizer written every 5 s and for frame-counter high-water marks ([[Custom-Protocol-Security]]).
 - **SPI NOR: `W25Q64JV`** (8 MB, 4 KB sectors, ~100 k cycles per sector). ⚠ **Take the industrial temperature grade.**
 
-Both share one SPI bus with separate chip selects. On a Slave, that bus must not be one of the two radio buses, or a storage fault can take out a radio pair ([[Dual-Radio-Redundancy-And-Coexistence]]). ⚠ This depends on the board having a third SPI bus, or on sharing carefully. Settle it in the hardware requirements.
+Both share **SPI3** with separate chip selects (pull-ups keep both deselected during reset). That bus is never a radio bus, so a storage fault can't take out a radio pair ([[Dual-Radio-Redundancy-And-Coexistence]]). **A third SPI bus is therefore required** on the gateway board: SPI1 and SPI2 carry the radios. Specified in `Specs/specs/06-gateway-hardware-requirements.md` §3 and HW-40/41 (v0.1).
 
 **If one must go:** keep FRAM, keep logs in a RAM ring dumped over the console or Modbus, and use the internal-flash journal for config. Under severe BOM pressure, keep NOR only and journal totalizers through LittleFS at a once-per-minute rate.
 
@@ -74,9 +75,9 @@ The right filesystem here: **copy-on-write with real power-loss guarantees** (an
 
 ## Sizing the outage buffer
 
-⚠ Still open: how much history must a gateway hold while the server or the master link is down, and for how long? On a Slave with ~54 devices reporting every 60 s at ~32 B per report, that's about **2.5 MB per day**. That's far beyond internal flash, comfortable in 8 MB NOR for a couple of days.
+The spec settles this by **buffering events, not raw telemetry** (`Specs/specs/02-tier1-protocol.md` §16): a slave keeps ≥ 1000 events and a section summary every 15 min for 7 days; the Master keeps ≥ 2000 events for the server. Per-device telemetry is not back-filled: it is a cache, and reports are snapshots.
 
-**Better answer: downsample.** Keep full resolution for the last hour and 15-minute summaries beyond that. Tracked in [[Open-Questions]].
+For scale: buffering every device report instead (60 devices every 120 s at ~32 B) would be about 1.4 MB per day, which is why it isn't done. ⚠ Whether the client needs telemetry back-fill after an outage is still open ([[Open-Questions]] Q15).
 
 ## Related
 
@@ -87,11 +88,13 @@ The right filesystem here: **copy-on-write with real power-loss guarantees** (an
 
 ## Sources
 
+- `Specs/specs/02-tier1-protocol.md` §16, `Specs/specs/06-gateway-hardware-requirements.md` §3, §5 (v0.1)
 - Research synthesis, 2026-09-09. LittleFS design: https://github.com/littlefs-project/littlefs/blob/master/DESIGN.md · STM32WL flash organisation from the ST STM32WL5 FLASH training deck (the double-word/ECC behaviour is the same class on STM32L4; ⚠ verify against the L476 reference manual).
 
 ## History
 
 - 2026-09-09: written for the STM32WLE5 (256 KB single-bank flash).
 - 2026-10-14: retargeted to STM32L4 (L476, dual-bank). Added the bank-swap config trap, the Slave slot-table persistence, and outage sizing for ~54 devices per Slave.
+- 2026-10-21: aligned with spec pack v0.1 (slave device table with session keys in FRAM, FRAM/NOR on a dedicated SPI3, event buffers instead of telemetry back-fill).
 
 Back to [[Index]]

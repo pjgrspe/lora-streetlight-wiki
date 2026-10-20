@@ -51,7 +51,7 @@ Raw goodput at CR 4/5 with ~200 B frames:
 
 Multiply by **3–5×** for fragment headers, gap repair and leaving room for normal traffic. Under the 400 ms dwell limit, ~200 B frames are only legal at SF7, so **firmware transfer runs at SF7**.
 
-**The duty cycle is the real limit.** At ≤1% per box, a gateway may transmit only **~36 s per hour**. At SF7 that's roughly **20 KB per hour**, so a ~200 KB gateway image takes **on the order of 10 hours** of transfer per Slave. ⚠ This is an estimate from the adopted regulatory profile; it would shrink a lot if NTC's actual rules are looser. Earlier estimates of 15–30 minutes per Slave ignored the duty cycle.
+**The duty cycle is the real limit.** At ≤1% per box, a gateway may transmit only **~36 s per hour**, and a slave's scheduled traffic already uses about 66% of that at the default 120 s cycle (`Specs/specs/04-channel-plan-and-airtime.md` §7). A transfer would need a maintenance mode that pauses detail reports. Even with the whole budget, At SF7 that's roughly **20 KB per hour**, a ~200 KB gateway image takes **on the order of 10 hours** of transfer per Slave. ⚠ This is an estimate from the adopted regulatory profile; it would shrink a lot if NTC's actual rules are looser. Earlier estimates of 15–30 minutes per Slave ignored the duty cycle.
 
 ### Per-pole devices
 
@@ -61,7 +61,7 @@ The only viable path is **multicast with forward erasure coding** (LoRa Alliance
 
 ## Rules
 
-1. **The Master gets firmware over RS485, not LoRa.** At 115200 baud a 200 KB image is ~20 s of wire time, ~60 s with framing. Implement it as a `start_ota` mailbox command plus chunked `FC16` writes ([[Modbus-Register-Map-Design]]).
+1. **The Master gets firmware over RS485, not LoRa.** At 115200 baud a 200 KB image is ~20 s of wire time, ~60 s with framing. It would need a new mailbox opcode plus chunked `FC16` writes ([[Modbus-Register-Map-Design]]); the v1 opcode list (0x01–0x0F) deliberately has none, because updates are an optional add-on.
 2. **Never brick on a partial transfer.** The running image is untouched until a verified swap, so an aborted transfer costs time, not a truck roll.
 3. **Never update all Slaves at once.** One section at a time, in a maintenance window, while the lighting state is static.
 4. Chunks of ~200 bytes with a `{fragment_index, total}` header and **bitmap-based gap repair**, not per-fragment ACKs. No per-chunk CRC needed: the PHY already has one and the whole image is hashed.
@@ -76,11 +76,13 @@ The only viable path is **multicast with forward erasure coding** (LoRa Alliance
 
 ## Sources
 
+- `Specs/specs/01-modbus-register-map.md` §8.3, `Specs/specs/04-channel-plan-and-airtime.md` §7 (v0.1)
 - Research synthesis, 2026-09-09. AN5554 LoRaWAN FUOTA with CubeWL; FUOTA energy/latency analysis: https://arxiv.org/pdf/2508.10588 · dual-bank swap OTA: https://blog.carrese.eu/articles/2026-06-13-stm32-dual-bank-flash-swap-ota/ · STM32WL crypto performance: https://wiki.st.com/stm32mcu/wiki/Security:STM32WL_Series:_Cryptographic_Library_Performance
 
 ## History
 
 - 2026-09-09: designed around the STM32WLE5's single-bank flash, with external NOR staging; LoRa updates estimated at 15–30 min per slave.
 - 2026-10-14: retargeted to dual-bank STM32L4 (bank swap). Re-estimated LoRa transfer under the ≤1% per-box duty cycle, added the per-pole device problem, and recorded that OTA is outside the current contracted scope.
+- 2026-10-21: aligned with spec pack v0.1 (still out of scope; no update opcode in v1; scheduled traffic already uses ~66% of a slave's budget).
 
 Back to [[Index]]

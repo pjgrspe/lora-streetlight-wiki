@@ -32,11 +32,19 @@ The radio is the **Semtech SX1276**, chosen by the client, used on every gateway
 | Pin | To STM32 | Notes |
 |---|---|---|
 | `NSS` | GPIO, software CS | One per radio |
-| `SCK/MOSI/MISO` | SPI1 or SPI2 | Primary and backup radio of a pair on **different** buses, so a stuck MISO on one can't take out both |
-| `DIO0` | EXTI | TxDone / RxDone / CadDone |
+| `SCK/MOSI/MISO` | SPI1 (primary radios) or SPI2 (backup radios) | Primary and backup radio of a pair on **different** buses, so a stuck MISO on one can't take out both |
+| `DIO0` | EXTI, distinct line number per radio | TxDone / RxDone / CadDone |
 | `DIO1` | EXTI | RxTimeout / CadDetected |
 | `NRESET` | GPIO | One per radio. Must be in the fault-recovery path |
 | Antenna | u.FL / SMA → coax → bulkhead | One per radio; see [[Enclosure-Power-And-Surge]] for coax loss |
+
+The proposed pin for every line, for 4 radios on NUCLEO-L476RG, is in spec 06 §3.2 (v0.1, ⚠ to verify).
+
+**Bring-up check:** `RegVersion` (0x42) reads `0x12` (spec 06 HW-10).
+
+**Transmit power:** set per radio so that **conducted power = 16 dBm − antenna gain + cable loss**. Each radio's antenna gain and cable loss are recorded at installation (spec 06 HW-84).
+
+**Common radio settings** for both tiers (spec 00 §4): 125 kHz, CR 4/5, explicit header, PHY CRC on, 8-symbol preamble, sync word `0x12`, normal IQ on uplink and **inverted IQ on downlink**. Tier 1 runs SF7 (SF8 allowed), cells SF9; SF10+ is not used in v1 (spec 04).
 
 ## Frequency accuracy (TCXO)
 
@@ -69,10 +77,12 @@ Philippine type approval is mandatory per RF module. NTC accepts host approval b
 - Research synthesis, 2026-09-09. SX1261/2 datasheet Rev 1.2: https://cdn.sparkfun.com/assets/6/b/5/1/4/SX1262_datasheet.pdf · https://github.com/Lora-net/sx126x_driver · https://docs.rakwireless.com/product-categories/wisduo/rak3172-module/overview/
 - Semtech SX1276 "not recommended for new design" status: https://www.semtech.com/products/wireless-rf/lora-connect/sx1276dvk1ias · https://forum.lora-developers.semtech.com/t/sx1276-nrfnd/1265
 - Project owner, 2026-10-14: client specified SX1276 on STM32 boards.
+- `Specs/specs/00`, `04`, `06` (v0.1, 2026-10-21).
 
 ## History
 
 - 2026-09-09: SX1262 (inside STM32WLE5 / RAK3172-T) recommended; SX1276 "acceptable only with inventory".
 - 2026-10-14: Client specified SX1276. Note rewritten around it; SX1262 kept as the migration path.
+- 2026-10-21: aligned with spec pack v0.1 (SPI1/SPI2 split, TX power rule, common radio settings, SF per tier, pin map pointer).
 
 Back to [[Index]]

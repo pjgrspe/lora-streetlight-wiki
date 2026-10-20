@@ -47,7 +47,7 @@ HardFault (naked asm) → capture stacked R0-R3, R12, LR, PC, PSR + MSP/PSP
                       → NVIC_SystemReset()
 ```
 
-On the next boot, startup checks the magic, moves the record into the log and into a **"last crash" register block readable over Modbus** (Master) or the console (any gateway), increments `crash_count`, and clears it. A technician can then read the PC of the fault without a debugger.
+On the next boot, startup checks the magic, moves the record into the log and into the log and the console (any gateway), increments `crash_count`, and clears it. Over Modbus, the v1 map exposes `reset_cause` (including "fault handler" and "watchdog"), `boot_count`, fault bit 8 (last reset was a watchdog reset) and the `MASTER_BOOT` event (`Specs/specs/01-modbus-register-map.md` §6). A full "last crash" register block is a candidate for a later minor version of the map, added in reserved space. A technician can then read the PC of the fault without a debugger.
 
 Also **enable the MPU** with a guard region below each task stack and at address 0. `configCHECK_FOR_STACK_OVERFLOW = 2` catches overflow after the fact; an MPU guard catches it at the faulting instruction.
 
@@ -68,8 +68,8 @@ Each step logged, each count persisted in FRAM:
 | Radio operation timeout | Re-issue once |
 | 3 consecutive timeouts on one radio | `NRESET` + full re-init of that radio |
 | 10 consecutive failures on one radio | Mark it failed; **fail over to its pair** and raise an alarm ([[Dual-Radio-Redundancy-And-Coexistence]]) |
-| Both radios of a pair dead > 30 min | Set `fault_bitmap.RADIO`; keep serving Modbus with stale-flagged cache; **continue the autonomous lighting schedule** |
-| No valid Modbus frame > 30 min (Master, configurable) | Set `fault_bitmap.SERVER_LOST`; run schedules autonomously |
+| Both radios of a pair dead > 30 min | Set the radio fault bits (`fault_bitmap` bits 1–2 on the Master); keep serving Modbus with stale-flagged cache; **continue the autonomous lighting schedule** |
+| No valid Modbus frame > 30 min (Master, configurable) | Raise `SERVER_LOST` (event `0x8013`, read by the server on reconnect); run schedules autonomously; keep buffering events |
 | Storage write failures > 5 | Mark storage read-only, keep running |
 | `crash_count` > 5 within 10 min of boot | Revert to the previous firmware image ([[Firmware-Update-Over-LoRa]]) |
 
@@ -84,11 +84,13 @@ The posture throughout: **degrade a function, never stop lighting the road.** Se
 
 ## Sources
 
+- `Specs/specs/01-modbus-register-map.md` §6, §7.3; `Specs/specs/05-fail-safe-behaviour.md` F1, F17 (v0.1)
 - Research synthesis, 2026-09-09. https://controllerstech.com/iwdg-and-wwdg-in-stm32/ · https://stm32world.com/wiki/STM32_Watchdogs · https://blog.carrese.eu/articles/2026-06-15-stm32-iwdg-watchdog-production/
 
 ## History
 
 - 2026-09-09: written for a single-radio master gateway.
 - 2026-10-14: counters and escalation made per radio, with failover to the paired radio before declaring the radio link dead. Applies to Master and Slave gateways.
+- 2026-10-21: aligned with spec pack v0.1 (what the v1 Modbus map exposes about resets; SERVER_LOST as an event; fault bits).
 
 Back to [[Index]]

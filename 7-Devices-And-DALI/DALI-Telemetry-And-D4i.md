@@ -5,7 +5,7 @@ What per-light data the system can get from the luminaire drivers. The project u
 ## Key points
 
 - Parts 251/252/253 (asset data, energy, diagnostics) are **optional in DALI-2, mandatory in D4i**. With existing drivers, they may not exist.
-- **The per-pole device probes capabilities at commissioning**; the gateways and server store the result as a **capability bitmap keyed by driver GTIN**.
+- **The per-pole device probes capabilities at commissioning** and after a driver swap. In the v0.1 protocol it reports only a **`d4i_available` status bit**; the server keeps device capabilities in its `device` table (spec 07). Richer capability and driver-identity reporting is open ([[Open-Questions]] Q34).
 - **Always available:** the `QUERY STATUS` byte, actual level and bank-0 identity. That preserves per-light **fault identity**, the most valuable piece.
 - **Fail-safe levels are set by command**, not procurement, so they work on any DALI generation.
 - Treat 251/252/253 as **optional enrichment**. Nothing in control, fault detection or fail-safe may depend on them.
@@ -16,7 +16,7 @@ What per-light data the system can get from the luminaire drivers. The project u
 |---|---|
 | DALI queries, memory-bank reads, caching on the device | Per-pole device (device developer) |
 | Reporting capabilities and telemetry over LoRa | Device-role protocol library + device firmware |
-| Capability bitmap in the registry, quality marking, `REPLACE_DRIVER` command | Slave/Master gateways |
+| Forwarding the `d4i_available` bit and "not available" values, relaying `REPLACE_DRIVER` | Slave/Master gateways |
 | Showing capabilities, not alarming on absent data | Local Monitoring Server |
 
 ## D4i in brief
@@ -76,8 +76,8 @@ Run per driver at commissioning and after any driver swap:
 
 Then:
 
-- The Modbus map keeps the **full fixed-stride per-light block**; unsupported fields are marked `NEVER_READ` in their quality word, never zero ([[Cache-Behind-Synchronous-Wire-Pattern]]).
-- A per-section `telemetry_capability` word tells the server what to expect.
+- The Modbus map keeps the **full fixed-stride per-device block**. A field the device can't measure is sent as "not available" (all bits set, e.g. `0xFFFF`), never as zero (spec 00 §2.2, spec 01).
+- The device sets `d4i_available` in its status bits, and uses Part 252 for its power and energy fields where the driver has it.
 - **Probe once, cache forever** for a given physical driver.
 
 ## If the drivers are plain DALI-2 or DALI-1
@@ -96,17 +96,17 @@ Then:
 
 Mandatory in Part 102 and set by command:
 
-- **`SYSTEM FAILURE LEVEL` = 100%**, **`POWER ON LEVEL` = 100%** (or 90%/100% to tell them apart on the road). Fail-safe layer 4 in [[Fail-Safe-Lighting-Rule]].
+- **`SYSTEM FAILURE LEVEL` = 254 (100%)**, **`POWER ON LEVEL` = 254 (100%)**. Client option: System Failure = 250 (≈90%) to tell the cases apart on the road (spec 05 §6, [[Open-Questions]] Q31). Fail-safe layer 4 in [[Fail-Safe-Lighting-Rule]].
 - **`MIN` / `MAX LEVEL`**, above the queried physical minimum. With mixed models, set a common MIN at or above the highest physical minimum to avoid uneven low-end dimming.
-- **`FADE TIME`**: long fades (16–90 s).
+- **`FADE TIME`**: index 7–10 (5.7–16 s) for scheduled changes (spec 05 §6). Longer fades are possible but slow down group switching.
 
 ⚠ **None of this survives a driver swap.** See [[Commissioning-And-Field-Swap]].
 
 ## Per-light telemetry contract, tiered
 
-Cached with age and quality ([[Modbus-Register-Map-Design]]):
+Cached with its age ([[Modbus-Register-Map-Design]]):
 
-- **Always:** status byte, actual and commanded level, driver GTIN/serial (so swaps are auditable).
+- **Always:** status (mapped to the device status bits in spec 03 §6), actual and target level. ⚠ Driver GTIN/serial has no field in v0.1 (Q34).
 - **If Part 252:** active power and cumulative energy, scaler applied.
 - **If Part 253:** driver temperature and thermal-derating flag (real events expected on west-facing poles in April–May), on-time and start counters against rated figures, failure-flag counters.
 
@@ -130,6 +130,7 @@ US DOE/PNNL **PNNL-32949** tested 19 LED streetlight drivers: **9 of 19 non-comp
 
 ## Sources
 
+- `Specs/specs/03-tier2-device-protocol.md` §6–§7, `Specs/specs/05-fail-safe-behaviour.md` §6 (v0.1).
 - Research synthesis, 2026-09-09. DALI Data: https://www.dali-alliance.org/dali/data.html · D4i: https://www.dali-alliance.org/d4i/ · Inventronics D4i technical primer: https://www.inventronicsglobal.com/am/wp-content/uploads/2020/07/DALI-DALI-2-and-D4i-Technical-Primer.pdf · Beckhoff Part 252/253 bank docs: https://infosys.beckhoff.com/content/1033/tcplclib_tc3_dali/8713097611.html · PNNL-32949: https://www.pnnl.gov/main/publications/external/technical_reports/PNNL-32949.pdf
 
 ## History
@@ -137,5 +138,6 @@ US DOE/PNNL **PNNL-32949** tested 19 LED streetlight drivers: **9 of 19 non-comp
 - 2026-09-09: recommended specifying D4i drivers as a procurement lever.
 - 2026-09-13: existing off-the-shelf drivers chosen; note became a discovery and graceful-degradation design.
 - 2026-10-14: per-pole devices; discovery now runs on the device, with the gateways storing the result.
+- 2026-10-21: aligned with spec pack v0.1 (only a d4i_available bit on the radio; not-available sentinels instead of quality words; fade 7–10; fail-safe levels 254 with 250 option; driver identity open as Q34).
 
 Back to [[Index]]

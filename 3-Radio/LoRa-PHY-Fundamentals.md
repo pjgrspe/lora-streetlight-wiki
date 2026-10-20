@@ -1,13 +1,13 @@
 # LoRa PHY Fundamentals
 
-How the LoRa physical layer works: spreading factor, bandwidth, coding rate, and the header/preamble/CRC settings that trip up custom protocols. Bottom line: under the Philippine profile this project uses SF7–SF10 at 125 kHz and CR 4/5, and the PHY CRC is not a substitute for authentication.
+How the LoRa physical layer works: spreading factor, bandwidth, coding rate, and the header/preamble/CRC settings that trip up custom protocols. Bottom line: the Philippine profile allows SF7–SF10 at 125 kHz; v1 uses **SF7–SF9** (tier 1 SF7, cells SF9) at CR 4/5, and the PHY CRC is not a substitute for authentication.
 
 ## Key points
 
 - LoRa is Chirp Spread Spectrum and demodulates **below the noise floor**. Each +1 SF buys ~2.5 dB and costs ~2× airtime.
-- All radios are **SX1276**. At 125 kHz its sensitivity runs from −123 dBm (SF7) to −132 dBm (SF10), the highest SF allowed here.
+- All radios are **SX1276**. At 125 kHz its sensitivity runs from −123 dBm (SF7) to −132 dBm (SF10). SF10 is legal but unused in v1: its 12-byte payload limit doesn't fit the cell's reports.
 - **SF11/SF12 are unusable** under the 400 ms dwell limit ([[LoRa-Airtime-Budget]]).
-- Defaults: **125 kHz, CR 4/5, explicit header, PHY CRC on**.
+- Settings: **125 kHz, CR 4/5, explicit header, PHY CRC on, 8-symbol preamble, sync word `0x12`**, IQ inverted on downlink (spec 00 §4).
 - The preamble length must match on TX and RX, or packets drop silently.
 - SFs are only quasi-orthogonal: a same-SF interferer 6 dB stronger kills your packet.
 
@@ -66,10 +66,12 @@ The widely quoted "SX126x = −148 dBm" is *not* a 125 kHz figure; it's SF12 at 
 
 ## Sources
 
+- `Specs/specs/00-common-frame-and-conventions.md` §4, `04-channel-plan-and-airtime.md` §4 (v0.1, 2026-10-21)
 - Research synthesis, 2026-09-09. Semtech SX1276 datasheet Rev. 7 (Tables 10, 13, 14, 15; §4.1.1.6): https://cdn.sparkfun.com/assets/7/7/3/2/2/SX1276_Datasheet.pdf · SX1261/2 datasheet Rev 1.2: https://cdn.sparkfun.com/assets/6/b/5/1/4/SX1262_datasheet.pdf
 
 ## History
 
 - 2026-10-14: Client specified SX1276 throughout; the Philippine radio profile (400 ms dwell) limits use to SF7–SF10. The SX1262 comparison is kept as context only.
+- 2026-10-21: aligned with spec pack v0.1: v1 uses SF7–SF9; sync word 0x12; inverted IQ on downlink.
 
 Back to [[Index]]

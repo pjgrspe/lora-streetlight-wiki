@@ -4,9 +4,9 @@ The **popcorn effect** is lights in a group switching on one by one, sometimes o
 
 ## Key points
 
-- Never send "turn on now" to a group. Send one frame carrying `{action, execute_at_utc = now + a few s}`.
+- Never send "turn on now" to a group. Send one frame carrying `{action, execute_at, not_after}`, with `execute_at` at least 5 s ahead (default now + 8 s).
 - With a LoRa device on every pole, this is now mandatory, not an optimisation.
-- Two-tier flow: the master multicasts to all Slaves (on both tier-1 radios); each Slave broadcasts the same `execute_at` into its cell on both channels; every device switches at T.
+- Two-tier flow: group commands are **P0**. The Master sends one broadcast on **both tier-1 radios** and repeats it 1 s later; each Slave broadcasts the same `execute_at` into its cell on both channels, also repeated; every device switches at T.
 - Reliable time distribution is a prerequisite ([[Time-Distribution-And-Clock-Trust]]).
 - Confirmation is slower than action: it arrives with the devices' next scheduled reports. Never gate the visible result on full confirmation.
 
@@ -14,12 +14,14 @@ The **popcorn effect** is lights in a group switching on one by one, sometimes o
 
 ```
 Server ─Modbus job─► Master
-Master ─tier-1 multicast {action, execute_at = T}, sent on both radios─► every Slave
-Each Slave ─cell broadcast {action, execute_at = T}, on both channels─► every device in its section
+Master ─tier-1 broadcast {action, execute_at = T}, on both radios, repeated after 1 s─► every Slave
+Each Slave ─cell broadcast {action, execute_at = T}, on both channels, repeated─► every device in its section
 At T: every device drives its luminaire over DALI. All switch together.
 ```
 
 Scheduled execution only works if every receiver agrees on the time, so time sync is a P1 requirement, not a nicety.
+
+The copies on both radios and the repeat are byte-identical (same frame counter), so receivers execute the command once. A P0 broadcast may pre-empt a device's uplink slot; reports are snapshots, so the next cycle's report replaces a lost one.
 
 ## Why this matters more now
 
@@ -27,17 +29,18 @@ The original design put only gateways and a couple of endpoints on the radio, wi
 
 ## Latency targets
 
-⚠ Targets, not measurements. Validate on the bench.
+Expected times from `Specs/specs/04-channel-plan-and-airtime.md` §8, at the default 120 s cycle. ⚠ Targets, not measurements. Validate on the bench.
 
 | Operation | Realistic target |
 |---|---|
 | Master accepts the job over Modbus | < 50 ms (cache/queue only) |
-| Multicast reaches all Slaves | 1–3 s |
-| Slaves broadcast into their cells | +1–2 s |
-| **Perceived "all lights on"** | **a few seconds, synchronised (switch at T)** |
-| Confirmation of every device | ~1–2 report cycles (the cell cycle is ~60 s) |
-| Individual luminaire dim command | seconds, via the cell's pending-command bitmap |
-| Alarm from a device visible at the server | seconds to tens of seconds (alarm contention window, then tier 1) |
+| **Group on/off/dim, server command to lights switching** | **5–10 s, all lights together (switch at T)** |
+| Single-pole command | up to ~30 s, in the cell's next downlink window (devices listen continuously, so no announcement is needed) |
+| Confirmation of every device | ~2 report cycles (the cycle is 120 s) |
+| Device status visible at the server | within one cycle (≤ 2 min) |
+| Per-device power and energy at the server | within 15 min |
+| Alarm from a device visible at the server | usually < 2 min (contention window, then the slave's tier-1 slot) |
+| Device declared offline | after 3 missed reports (6 min) |
 
 Decouple action from confirmation in the UI.
 
@@ -49,11 +52,13 @@ Decouple action from confirmation in the UI.
 
 ## Sources
 
+- `Specs/specs/02-tier1-protocol.md` §11.3–11.4, `Specs/specs/04-channel-plan-and-airtime.md` §6.4, §8 (v0.1)
 - Research synthesis, 2026-09-09. Popcorn effect in LoRaWAN street lighting: https://tvilight.com/lorawan-risks-in-smart-street-lighting-why-cities-are-cautious/ · synchronised execution via controlled delay: US10721700 · group multicast control: US12081358
 
 ## History
 
 - 2026-09-09: written for ~9 radio nodes with a DALI broadcast per section.
 - 2026-10-14: per-pole radio devices; execute_at broadcast now applied at both tiers, and latency targets restated.
+- 2026-10-21: aligned with spec pack v0.1 (P0 path on both radios with a 1 s repeat, execute_at ≥ 5 s ahead, latencies at the 120 s cycle).
 
 Back to [[Index]]

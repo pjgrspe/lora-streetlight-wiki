@@ -1,91 +1,97 @@
 # Custom Protocol Frame Design
 
-The frame format, addressing, ACK/retry and fragmentation rules for the project's own LoRa protocol, used on both tiers. Bottom line: a 12-byte header plus a 4-byte MIC, a version nibble first, little-endian, sized so a useful payload fits SF9 under the 400 ms dwell limit.
+The frame format, addressing, acknowledgement and fragmentation rules of the project's own LoRa protocol, used on both tiers. Bottom line: an 8-byte header plus a 4-byte MIC (12 bytes of overhead), version first, little-endian, so a useful payload fits SF9 under the 400 ms dwell limit.
 
 ## Key points
 
-- **Hierarchical 20-bit address:** `NetID:8 | GwID:4 | NodeID:8`. Any number of slaves up to 14 per site, up to 254 devices per slave.
-- **`VER` in the first nibble**, and **little-endian throughout**, written into the spec.
-- 16 bytes of overhead leaves **50 B of app payload at SF9** and only 8 B at SF10.
-- **ACK every state-changing command**; ACKs echo the `SEQ` and carry a MIC. Retries use jittered exponential backoff and **escalate SF only up to SF10**.
-- One frame format and one library for all three roles (master, slave, device). The device role ships to the device developer ([[Team-And-Ownership]]).
+- **12-bit address `GwID:4 | NodeID:8`** inside an 8-bit site **NetID**. Up to 14 slaves per site; NodeIDs 1–63 per section in v1.
+- **8-byte header + 4-byte MIC.** No length field and no header CRC: the LoRa explicit header carries the length and the PHY CRC protects it.
+- **54 B of payload at SF9**, 243 B at SF7.
+- **Little-endian throughout** on the radio. `VER` sits in the first byte.
+- **Routine reports are not acknowledged** (they are snapshots). Commands, events, detail and joins are.
+- One frame format and one library for all three roles. The device role ships to the device developer ([[Team-And-Ownership]]).
+
+Specified in `Specs/specs/00-common-frame-and-conventions.md` (v0.1). This note keeps the reasoning.
 
 ## Addressing
 
-Three levels, mirroring the topology:
-
 ```
-[ NetID : 8 ] [ GwID : 4 ] [ NodeID : 8 ]     — 20-bit logical address
+NetID (8 bits, per site)   +   address = GwID:4 | NodeID:8   (12 bits)
 ```
 
-- **`NetID`**: site/installation ID. Stops two installations cross-talking on the same channel, and is a cheap first-pass filter.
-- **`GwID`**: 0 = master, 1..14 = slave gateways (one per section; the number of sections isn't fixed), 15 = broadcast to all gateways.
-- **`NodeID`**: 0 = the gateway itself, 1..254 = devices in that slave's cell (design ceiling 60), 255 = broadcast within the cell.
+- **`NetID`**: site ID, 1–254. Frames from another site are dropped before any crypto work. It is sent once per frame, not once per address, because source and destination are always on the same site.
+- **`GwID`**: 0 = master, 1–14 = slaves (one per section; the number of sections is configured, not fixed), 15 = all gateways.
+- **`NodeID`**: 0 = the gateway itself, 1–63 = devices (60 used at most), 64–253 reserved for growth, 254 = an unjoined device (only in `JOIN_REQ`), 255 = every device in the cell.
 
-Carry the long unique ID (DevEUI or the STM32 96-bit UID) **only during provisioning**, never in steady-state frames: at 1758 b/s (SF9) every byte costs airtime. See [[Device-Identity-Namespaces]].
+The same 12-bit value is the device reference in the Modbus register map, so a pole's address means the same thing on the radio and at the server ([[Modbus-Register-Map-Design]]).
 
-Also set a distinct **hardware sync word** per network. It won't prevent collisions, but it stops receivers wasting time on foreign LoRa traffic.
+The long unique ID (the STM32 96-bit UID) travels **only in joins**, never in routine frames: every byte costs airtime ([[Device-Identity-Namespaces]]).
 
 ## Frame format
 
 ```
-+------+------+------+------+--------+-----+---------+---------+------+
-| VER  | TYPE | DST  | SRC  | SEQ    | LEN | HDRCRC  | PAYLOAD | MIC  |
-| 4b   | 4b   | 20b  | 20b  | 16b    | 8b  |  8b     |  0..N   | 4 B  |
-+------+------+------+------+--------+-----+---------+---------+------+
-        \_________________ 12-byte header ________________/
+byte 0     VER:4 | DIR:1 | ACKREQ:1 | PRIO:2
+byte 1     TYPE
+byte 2     NETID
+bytes 3–5  DST:12 | SRC:12
+bytes 6–7  FCNT (low 16 bits of a 32-bit counter)
+           PAYLOAD (encrypted)
+           MIC (4 bytes)
 ```
 
-| Field | Notes |
+| Field | Why it's there |
 |---|---|
-| `VER` | **Always first.** Four bits of version is the cheapest forward-compatibility insurance; field-deployed street lights outlive protocol revisions |
-| `TYPE` | `BEACON, POLL, DATA, ACK, NACK, CMD, CMD_ACK, JOIN_REQ, JOIN_ACC, FRAG, FRAG_ACK, FW_CHUNK, TIME_SYNC, ALARM, RELAY, RSVD`. `BEACON` also carries the cell slot-map version and pending-command bitmap ([[Slave-Cell-Capacity-And-Scheduling]]) |
-| `SEQ` | 16-bit, monotonic per source, persisted in NVM. The low half of a 32-bit counter that feeds the MIC and nonce ([[Custom-Protocol-Security]]); also the duplicate-suppression key, including across a box's two radios |
-| `HDRCRC` | CRC-8 over the header only, so a receiver rejects a corrupt header before trusting its length field. The LoRa explicit header protects itself, not *our* header |
-| `MIC` | Truncated AES-CMAC. Replaces a payload CRC-32 and adds authenticity |
+| `VER` | Always first. Four bits of version is the cheapest forward-compatibility insurance; street lights outlive protocol revisions |
+| `DIR` | Uplink/downlink. Also a MIC input, so an uplink can't be replayed as a downlink |
+| `ACKREQ`, `PRIO` | Lets every hop handle acknowledgement and priority without parsing the payload |
+| `TYPE` | One number space for both tiers (beacon, report, event, command, ack, join, fragments, summary, detail, heartbeat, whitelist). Registry in spec 00 §7 |
+| `FCNT` | Low half of the sender's 32-bit counter. Feeds the MIC and the encryption counter, and is the duplicate key, including across a box's two radios ([[Custom-Protocol-Security]]) |
+| `MIC` | Truncated AES-CMAC. Replaces a payload CRC and adds authenticity |
 
-**Little-endian throughout, and say so in the spec.** Mixed endianness is the number-one interop bug in home-grown protocols, and with a separate device developer it's a real risk.
+**Why no length or header CRC:** the earlier design had both (a 12-byte header). The LoRa explicit header already carries the PHY length, and the PHY CRC drops corrupt frames in hardware. The MIC catches anything that slips through. Dropping both saves 4 bytes of airtime on every frame.
+
+**Little-endian, and the spec says so.** Mixed endianness is the number-one interop bug in home-grown protocols, and with a separate device developer it's a real risk. (Modbus stays big-endian, high word first: that's a different interface.)
 
 ## Payload budget
 
-16 bytes of overhead (12 B header + 4 B MIC) under the 400 ms dwell limit ([[LoRa-Airtime-Budget]]):
+12 bytes of overhead under the 400 ms dwell limit ([[LoRa-Airtime-Budget]]):
 
-| SF | Max PHY payload | Usable app payload |
+| SF | Max PHY payload | Max frame payload |
 |---|---|---|
-| 7 | 255 B | 239 B |
-| 8 | 138 B | 122 B |
-| **9** | **66 B** | **50 B** ← comfortable |
-| 10 | 24 B | **8 B** ← tight |
-| 11/12 | 0 B | not permitted |
+| 7 | 255 B | 243 B |
+| 8 | 138 B | 126 B |
+| **9** | **66 B** | **54 B** |
+| 10 | 24 B | 12 B (not used in v1) |
 
-To fit more at SF10, define a compact DATA type with 12-bit addresses and an 8-bit SEQ (saves 3 bytes). A device's scheduled 32 B report (16 B data) fits comfortably at SF9.
+An LED device's 20-byte report is a 32-byte frame (247 ms at SF9). The meter's 44-byte report is 56 bytes (349 ms) and takes a double slot.
 
 ## CRC / FEC layering
 
 | Layer | Mechanism |
 |---|---|
-| PHY | LoRa FEC at CR 4/5 + the 16-bit hardware payload CRC: both free, leave on |
-| Header | CRC-8 (poly 0x07 or 0x2F) |
-| Frame | **AES-CMAC-128 truncated to 4 bytes**: 2⁻³² forgery probability per attempt, same as LoRaWAN |
+| PHY | LoRa FEC at CR 4/5 + the 16-bit hardware payload CRC: both on |
+| Frame | **AES-CMAC-128 truncated to 4 bytes**: 2⁻³² forgery probability per attempt, as in LoRaWAN |
 
-**Don't** add application-layer Reed-Solomon on top of LoRa's coding for normal traffic. **Do** consider forward erasure coding for any future firmware images.
+Don't add application-layer Reed-Solomon for normal traffic. Consider forward erasure coding only for any future firmware images.
 
-## ACK and retry
+## Acknowledgement and retry
 
-- **ACK every command that changes physical state.** Fire-and-forget is unacceptable for street lighting. Inside a cell, routine device reports are confirmed by **one group-ACK bitmap per cycle**, not per-frame ACKs.
-- Retry up to 3 times. Timeout ≥ `ToA(response) + turnaround + 20%`. At SF9 with a 40 B response that's 288 ms + ~30 ms, so **use 400 ms**, not a blanket 1 s.
-- **Exponential backoff with jitter:** `t_n = t_base · 2^n + U(0, t_base)`. Without jitter, two nodes that collided collide again deterministically. Devices get their randomness from the SX1276 wideband RSSI.
-- **On retry, escalate SF, not power** (the radios already run at the legal EIRP ceiling). SF9 → SF10 buys ~2.5 dB at 2× airtime; **SF10 is the cap**, since SF11/12 break the dwell limit.
-- **Emergency (P0) commands also go out on the backup radio** at tier 1. Receivers drop the duplicate by `SEQ` ([[Dual-Radio-Redundancy-And-Coexistence]]).
-- **The ACK must echo the SEQ it acknowledges, and carry a MIC.** A bare "OK" is unattributable and replayable.
+- **Commands that change physical state are always acknowledged** with a `CMD_ACK` that carries the resulting state and a result code from one system-wide table (spec 02 §11.5).
+- **Routine device reports are not acknowledged.** Each is a snapshot; a lost one is replaced by the next cycle's. **Events** are acknowledged through the cell beacon's event-ACK bitmap. Tier-1 summaries are acknowledged in the master's beacon.
+- **Retries use jittered exponential backoff** so two nodes that collided don't collide again. Devices get randomness from the SX1276 wideband RSSI.
+- **No spreading-factor escalation inside a scheduled cell**: slot lengths are fixed. A link that doesn't close at SF9 is a placement problem ([[Link-Budget-And-Site-Survey]]).
+- **P0 commands go out on both tier-1 radios and are repeated once 1 s later.** The copies are byte-identical, with the same frame counter, so receivers drop the duplicates ([[Dual-Radio-Redundancy-And-Coexistence]]).
+- Every hop also drops a repeated `cmd_id`, so a retried command is acknowledged as a duplicate but never executed twice.
 
 ## Fragmentation
 
-Needed for 24-hour schedule tables, bulk log retrieval, configuration pushes and any future firmware images. Model it on LoRa Alliance **TS004 Fragmented Data Block Transport**:
+For anything larger than one frame: whitelist dumps, configuration blobs, logs. Modelled on LoRa Alliance TS004:
 
-- **Session setup first:** `FragIndex`, `FragNb`, `FragSize`, plus a whole-block CRC or hash.
-- Fixed fragment size matched to the SF's dwell-limited payload: 48 B at SF9.
-- **Bitmap-based NACK, not per-fragment ACK.** The receiver reports missing fragments as a bitmap after the block, and the sender resends only the gaps. Per-fragment ACK doubles the airtime.
+- Fragment 0 carries a block header (content type, length, CRC-32 of the whole block).
+- Fixed fragment size per SF: 232 B at SF7, 120 B at SF8, 48 B at SF9.
+- **Bitmap NACK, not per-fragment ACK.** The receiver reports missing fragments after the last one; the sender resends only the gaps, up to 3 rounds.
+
+Ordinary commands, including schedule changes, fit in one frame and don't fragment.
 
 ## Related
 
@@ -97,10 +103,12 @@ Needed for 24-hour schedule tables, bulk log retrieval, configuration pushes and
 
 ## Sources
 
-- Research synthesis, 2026-09-09. TS004: https://lora-alliance.org/wp-content/uploads/2020/11/fragmented_data_block_transport_v1.0.0.pdf · TS011 Relay (useful reference for hop addressing): https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay
+- `Specs/specs/00-common-frame-and-conventions.md`, `02-tier1-protocol.md`, `03-tier2-device-protocol.md` (v0.1, 2026-10-21)
+- Research synthesis, 2026-09-09. TS004: https://lora-alliance.org/wp-content/uploads/2020/11/fragmented_data_block_transport_v1.0.0.pdf · TS011 Relay: https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay
 
 ## History
 
-- 2026-10-14: GwID range covers any number of slaves (not fixed at 3); SF escalation capped at SF10 under the adopted 400 ms dwell limit; group-ACK in cells; P0 duplicated on the backup radio; one library shared with the device developer.
+- 2026-10-14: GwID range covers any number of slaves (not fixed at 3); SF escalation capped at SF10; group-ACK in cells; P0 duplicated on the backup radio; one library shared with the device developer.
+- 2026-10-21: aligned with spec pack v0.1. Header cut from 12 to 8 bytes (12-bit addresses inside one NetID, no length field, no header CRC); 54 B payload at SF9; reports unacknowledged, events acked by bitmap; no SF escalation in cells; P0 copies share one frame counter.
 
 Back to [[Index]]

@@ -24,14 +24,14 @@ Corroborating academic work: LoRa transceivers are half-duplex, so downlink bloc
 
 | Criticism | Applies? | How it's handled |
 |---|---|---|
-| Downlink asymmetry | **Yes, per cell** | Devices listen continuously (mains-powered); the Slave's downlink is one beacon + group ACK + broadcast commands per cycle, not per-device polls ([[Slave-Cell-Capacity-And-Scheduling]]) |
+| Downlink asymmetry | **Yes, per cell** | Devices listen continuously (mains-powered); the Slave's downlink is one beacon per channel per cycle (carrying the event-ACK bitmap) plus broadcast commands, not per-device polls ([[Slave-Cell-Capacity-And-Scheduling]]) |
 | Popcorn effect | **Yes, now that each pole has a radio** | One broadcast with `execute_at` per tier: master → Slaves, then each Slave → its cell on both channels |
 | Duty cycle blocking control | **Yes, must be engineered** | Airtime ledger per box with a hard P0 reserve; scheduled uplinks keep the Slave's own TX low; autonomous schedules make the nightly switch cost zero airtime ([[LoRa-Airtime-Budget]]) |
 | "Real-time control unsafe" | **Yes, for sub-second unscheduled action** | Don't promise it. Promise synchronised group action within seconds, and say so in the spec |
 | FUOTA impractical | **Yes again, for devices** | ~12 days serial for 128 × 200 KB. Excluded from the current engagement; devices are updated wired/on the bench. Gateway OTA stays feasible ([[Firmware-Update-Over-LoRa]]) |
 | Gateway single point of failure | **Yes** | Autonomy at every level ([[Slave-Gateways-As-Intelligent-Sub-Controllers]], [[Fail-Safe-Lighting-Rule]]). Dual radios cover radio/antenna faults, not box death |
 | Interop lock-in | **Yes**: the protocol is custom | Mitigate at the **northbound** boundary, not the radio ([[Northbound-Interface-Options]]) |
-| ISM interference / jamming | **Yes** | Paired radios on separate channels (frequency diversity), CAD, SF escalation up to SF10, noise monitoring, autonomous fallback |
+| ISM interference / jamming | **Yes** | Paired radios on separate channels (frequency diversity), CAD, failover to the standby channel or single-channel mode, noise monitoring, autonomous fallback |
 
 ## The judgement
 
@@ -62,5 +62,6 @@ Per-pole LoRa is defensible here **because it is bounded**: a two-tier topology,
 
 - 2026-09-09: written when the radio carried ~9 nodes and DALI did the last hop; the advice was "don't put per-luminaire control on the radio".
 - 2026-10-14: the revised architecture put a LoRa device on every pole; mitigations became requirements.
+- 2026-10-21: aligned with spec pack v0.1 (no SF escalation in v1; interference handled by channel failover).
 
 Back to [[Index]]

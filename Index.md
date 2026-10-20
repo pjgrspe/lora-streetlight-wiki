@@ -13,6 +13,7 @@ Local Monitoring Server ──RS485 / Modbus RTU──► MASTER GATEWAY (2 radi
                                │ LoRa tier 2 — 2 channels, both active
                           up to 60 devices per section: per-pole LED driver/monitoring devices
                           + 1 energy meter ──DALI──► luminaire
+                          (both tiers repeat on a 120 s cycle by default)
 ```
 
 | Owner | Scope |
@@ -20,6 +21,20 @@ Local Monitoring Server ──RS485 / Modbus RTU──► MASTER GATEWAY (2 radi
 | **pgorospe** | Local Monitoring Server, Master Gateway, Slave Gateway firmware, the LoRa protocol (all tiers) |
 | Device developer | LoRa energy meter, LoRa LED driver & monitoring device (Blue Pill STM32F103 + SX1276) |
 | Hardware developer | Gateway hardware, built on STM32 dev boards + SX1276 modules |
+
+## Specs
+
+The signed-off contract documents (the M1 pack) live in the `Specs/` folder, repo `lora-streetlight-specs`: specs 00–07 plus the register-map CSV and a decision log. **The specs override the wiki.** The wiki explains why; the specs say exactly what. Code lives in `Code/`, repo `lora-streetlight`.
+
+| Spec | Topic |
+|---|---|
+| 00 | Common frame format and conventions |
+| 01 | Modbus register map |
+| 02 / 03 | Tier-1 and tier-2 radio protocols |
+| 04 | Channel plan and airtime budget |
+| 05 | Fail-safe behaviour |
+| 06 | Gateway hardware requirements |
+| 07 | Server data model and requirements |
 
 ## Start here
 

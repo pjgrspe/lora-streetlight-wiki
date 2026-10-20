@@ -14,13 +14,14 @@ How time flows from the server to the Master, Slaves and devices, and what happe
 
 ```
 NTP-synced PC ──▶ Local Monitoring Server
-                    │ Modbus FC16 → unix_time(32) + tz   (a proposal)
+                    │ Modbus SET_TIME job: utc + tz_offset + force   (a proposal, hourly)
                     ▼
               MASTER GATEWAY  (RTC + backup, calibrated)   ← time root
-                    │ tier-1 beacon on both radios: {epoch, seq, sched_epoch, uncertainty}
+                    │ tier-1 BEACON (primary) + HEARTBEAT (standby), every 120 s cycle:
+                    │ {utc, ms at TxDone, cycle_seq, clock_trusted, config_ver}
                     ▼
               SLAVE GATEWAYS  (own RTC, own astro table)
-                    │ tier-2 cell beacon on both channels
+                    │ cell BEACON on both channels, every cycle: {utc, ms, cycle_seq, flags}
                     ▼
               devices (own fallback schedule)
 ```
@@ -29,7 +30,7 @@ NTP-synced PC ──▶ Local Monitoring Server
 
 If the Master simply adopts the server's time and that PC's clock is wrong, the whole site is mistimed with no independent check.
 
-> **Give the Master a battery-backed, calibrated RTC and treat the server's time as a *proposal*.** Reject jumps beyond N minutes unless a force flag is set. Log every correction; **a steadily growing correction means a failing crystal.**
+> **Give the Master a battery-backed, calibrated RTC and treat the server's time as a *proposal*.** Reject jumps beyond 5 minutes unless a force flag is set (only an admin may send it). Log every correction; **a steadily growing correction means a failing crystal.**
 
 ## Frequency references: crystals and TCXOs
 
@@ -55,9 +56,19 @@ If the Master simply adopts the server's time and that PC's clock is wrong, the 
 | 100 ms | 40 ppm | 42 min |
 | **100 ms** | **4 ppm (TCXO both ends)** | **7 hours** |
 
-Tier-1 and tier-2 beacons go out every superframe anyway, so slot alignment is refreshed far more often than these limits. The Slave should still filter the offset (EWMA) *and* estimate its own rate error, so it can extrapolate between beacons and survive a few missed ones.
+Tier-1 and cell beacons go out every 120 s cycle, well inside these limits. Device slots allow ±20 ms. The slave filters the offset with an EWMA (α = 1/4), estimates its own rate error over at least 10 beacons, extrapolates between beacons, and slews rather than steps unless the offset exceeds 1 s.
 
 **Timestamp at the interrupt, not at enqueue.** Stamp the beacon at `TxDone` and its receipt at `RxDone` (DIO0 on SX1276), then subtract the known airtime. That removes the largest error term and gives millisecond-level sync.
+
+## When a clock is trusted
+
+| Node | Trusted when |
+|---|---|
+| Master | Its RTC kept time through the last power cycle, or the server's `SET_TIME` was accepted since boot |
+| Slave | It accepted a beacon with `clock_trusted = 1` in the last 24 h, or its RTC kept time and it was synced in the last 7 days |
+| Device | Its RTC kept time, or it has heard a cell beacon since boot |
+
+Specified in `Specs/specs/02-tier1-protocol.md` §13 and `Specs/specs/05-fail-safe-behaviour.md` F14a–c (v0.1).
 
 ## Astronomical scheduling needs almost no accuracy
 
@@ -92,11 +103,13 @@ If the RTC is invalid (dead backup plus a power cycle at 3 a.m.), the node doesn
 
 ## Sources
 
+- `Specs/specs/02-tier1-protocol.md` §13, `Specs/specs/05-fail-safe-behaviour.md` (v0.1)
 - Research synthesis, 2026-09-09. LSE load-capacitance field reports: https://community.st.com/t5/stm32-mcus-products/stm32f103-lse-load-capacitance-calculations-rtc/td-p/694548 · LoRa time-sync achievable accuracy: https://www.mdpi.com/1999-5903/18/2/80 · supercap inrush: https://mischianti.org/stm32-internal-rtc-clock-and-battery-backup-vbat/
 
 ## History
 
 - 2026-09-09: written for the STM32WLE5 / SX1262 (TCXO driven from DIO3).
 - 2026-10-14: updated for SX1276 modules (usually crystal-only), the NUCLEO-L476RG VBAT strap, beacons on both radios at both tiers, and the Blue Pill device fallback.
+- 2026-10-21: aligned with spec pack v0.1 (beacon contents, 120 s cycle, 5-min jump limit, EWMA/slew rules, trust conditions per node).
 
 Back to [[Index]]

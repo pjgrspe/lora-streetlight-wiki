@@ -4,7 +4,7 @@ How the paired LoRa radios on each gateway work: two on the master, four on each
 
 ## Key points
 
-- **Master:** 2 radios toward the slaves, a primary plus an **exercised standby** that heartbeats every superframe. P0 commands go out on both.
+- **Master:** 2 radios toward the slaves, a primary plus an **exercised standby** that heartbeats every cycle. P0 commands go out on both, repeated once.
 - **Slave:** 2 radios up to the master (same scheme), and 2 down to its devices, **both active** on separate channels, each serving about half the devices.
 - **A transmitting radio deafens every other radio in the same box.** One TX scheduler per box, with blanking windows. The master's tier-1 slot for each slave falls inside that slave's cell quiet window.
 - **Real independence needs separate SPI buses, resets, power rails, antennas and coax** for the two radios of a pair.
@@ -51,12 +51,13 @@ Tier-1 traffic is small (summaries and exceptions per section), so **the second 
 
 | Radio | Channel | Carries |
 |---|---|---|
-| A, primary | one edge of 915–918 MHz (e.g. ~915.3 MHz) | All scheduled tier-1 traffic |
-| B, exercised standby | the opposite edge (e.g. ~917.7 MHz), for frequency diversity | **A heartbeat every superframe**, so its health is always proven, plus **a duplicate of every P0 command** (emergency ON, `execute_at` group commands) |
+| A, primary | **ch 0, 915.2 MHz** (lowest band edge) | All scheduled tier-1 traffic |
+| B, exercised standby | **ch 13, 917.8 MHz** (opposite edge), for frequency diversity | **A heartbeat every cycle** from the master (every 5th cycle from each slave), so its health is always proven, plus **a duplicate of every P0 command** (emergency ON, `execute_at` group commands) |
 
 - **A backup that is never exercised is a latent failure.** If radio B is only used when A dies, its dead coax is discovered at the worst moment. Heartbeating on both every cycle catches that.
 - **Duplicating P0 on both channels is cheap** (a few frames a day). Receivers deduplicate on `SEQ` ([[Custom-Protocol-Frame-Design]]).
-- **Failover:** if A misses *N* consecutive heartbeats or its PER crosses a threshold, B takes all traffic. **Failback** only after A has been clean for a hold-off period (e.g. 10 minutes), to avoid flapping. Both events raise an alarm.
+- **Failover:** after **3 consecutive missed exchanges** on A (or a failed radio self-test), B takes all traffic: the beacon moves to ch 13 and the heartbeat to ch 0, so A keeps being exercised. **Failback** only after A has been clean for **5 cycles (10 min)**, to avoid flapping. Both raise an alarm. Slots, timing and addresses don't change, only the channel.
+- **A dead standby is detected too:** no heartbeat heard on it for 3 cycles at a slave, or 10 at the master (each slave only sends one every 5th cycle), raises `STANDBY_RADIO_DOWN`.
 - **Load-sharing** (both radios carrying traffic all the time) doubles the state to debug and buys nothing on a lightly loaded tier.
 
 ### Slave ↔ device pair (tier 2)
@@ -65,7 +66,7 @@ Here the second radio **does** add capacity, because up to 60 devices share it.
 
 - **Both radios active, splitting the devices.** Each device is assigned to channel A or B at join, roughly half each, and both radios receive concurrently.
 - The slave sends its cell beacon on **both** channels.
-- **Failover is device-driven:** a device that misses *N* beacons on its home channel scans to the other channel and re-registers. The surviving radio then serves the whole cell: ~15 s of uplink per cycle at SF9 for 53 devices, ~17 s at 60, still inside a 60 s cycle. **A failed downstream radio halves capacity but doesn't lose the cell.**
+- **Failover is device-driven:** a device that misses **2 beacons** on its home channel listens on the other one. If that beacon shows `single_channel_mode`, the device keeps its slot number there with no rejoin. The surviving radio runs all 64 slot positions back to back (19.2 s), still well inside the 120 s cycle, and the slave shifts its cell cycle 10 s earlier so its tier-1 slot stays in the quiet window ([[Slave-Cell-Capacity-And-Scheduling]]). **A failed downstream radio halves capacity but doesn't lose the cell.**
 
 ## What dual radios protect against
 
@@ -83,7 +84,7 @@ Here the second radio **does** add capacity, because up to 60 devices share it.
 
 The project designs to the Philippine envelope: 915–918 MHz, 125 kHz channels, ≤16 dBm EIRP, ≤400 ms per TX, ≤1% duty ([[Philippines-Regulatory-Context]]).
 
-- **Channels:** the 200 kHz raster gives ~15 channels. Need = **2 (tier 1) + 2 per section**, so about **6 sections** fit before sections must reuse channels, which then depends on physical separation.
+- **Channels:** the 200 kHz raster gives **14 channels** (915.2–917.8 MHz). Tier 1 uses ch 0 and ch 13. Section n uses **ch n and ch n+6**, 1.2 MHz apart so a slave's two receivers aren't on adjacent channels. Up to **6 sections** fit before pairs must be reused, which then depends on physical separation (spec 04).
 - **Duty cycle:** it's unclear whether a 4-radio slave counts as one device (one shared 1% budget) or four. **The airtime ledger is kept per box** (the conservative reading) until NTC answers ([[Open-Questions]] Q21).
 
 ## Related
@@ -96,6 +97,7 @@ The project designs to the Philippine envelope: 915–918 MHz, 125 kHz channels,
 
 ## Sources
 
+- `Specs/specs/02-tier1-protocol.md` §12, `03-tier2-device-protocol.md` §11, `04-channel-plan-and-airtime.md` (v0.1, 2026-10-21)
 - Client information relayed by the project owner, 2026-10-14: 2 LoRa radios master↔slave ("1 is backup"), 2 slave↔devices ("for efficiency, ~50 devices"), 4 per slave in total.
 - Semtech SX1276 product pages, "not recommended for new design" status: https://www.semtech.com/products/wireless-rf/lora-connect/sx1276dvk1ias · https://forum.lora-developers.semtech.com/t/sx1276-nrfnd/1265
 - SX1276 2 MHz blocking figure (94 dB, SF12/125 kHz) as cited in https://arxiv.org/pdf/2011.03952
@@ -105,5 +107,6 @@ The project designs to the Philippine envelope: 915–918 MHz, 125 kHz channels,
 
 - 2026-10-14: Note created when the client specified dual radios on every gateway link.
 - 2026-10-14: Number of sections no longer fixed (channel need generalised to 2 + 2 per section); Philippine radio profile adopted.
+- 2026-10-21: aligned with spec pack v0.1. Concrete channels (tier 1 ch 0/ch 13, section n ch n/ch n+6, 14 channels); failover after 3 missed exchanges, failback after 5 clean cycles; standby-down detection; device moves channel after 2 missed beacons; single-channel mode shifts the cell cycle.
 
 Back to [[Index]]

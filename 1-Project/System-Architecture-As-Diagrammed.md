@@ -9,6 +9,7 @@ What the client's architecture diagram and its handwritten annotations actually 
 - **One LoRa LED Driver & Monitoring Device per pole** (confirmed), plus one energy meter per section. Exact device count TBC; design ceiling 60 per Slave.
 - **The number of sections is not fixed.** The diagram shows 3 (53 / 38 / 37 lights, 128 total), but there may be 4 or more.
 - Radios are **SX1276**, boards are **STM32**.
+- The design that answers this diagram is now written as the M1 spec pack (`Specs/specs/00`–`07`). Both radio tiers run on a **120 s cycle** by default (spec 04).
 
 ## Topology
 
@@ -58,7 +59,7 @@ MASTER LoRa GATEWAY ×1 — 2 LoRa radios (primary + backup)
 
 - Physical distances between master, slaves and poles ([[Open-Questions]] Q16)
 - Exact number of sections and devices ([[Open-Questions]] Q27)
-- Which exact STM32 development board is supplied
+- Which exact STM32 development board is supplied. Spec 06 proposes NUCLEO-L476RG for the gateways and asks for 3 boards + 10 radios on the bench from week 2
 
 The radio band is now decided separately — see [[Philippines-Regulatory-Context]].
 
@@ -75,10 +76,12 @@ The radio band is now decided separately — see [[Philippines-Regulatory-Contex
 - `Sources/system-architecture-diagram-2026-09-09.jpg` — original issued 2026-09-09; re-issued with client annotations 2026-10-14 (same filename): "modbus" on the RS485 link, "and control" under Central Monitoring, "1 is backup / 2 LoRa radio" at the master, "4 LoRa" and "2 for efficiency (50 devices)" at slave 1.
 - Verbal scope from project owner, 2026-09-09: STM32 for the board, custom (non-LoRaWAN) LoRa protocol.
 - Verbal scope from project owner, 2026-10-14: Modbus; dual radios; SX1276 + STM32; one device per pole; one radio per device; section count may be 4 or more.
+- `Specs/specs/04-channel-plan-and-airtime.md`, `Specs/specs/06-gateway-hardware-requirements.md` (v0.1).
 
 ## History
 
 - 2026-09-09 — original diagram: no RS485 protocol named, one radio per gateway, 2 devices per section, ~9 radio nodes.
 - 2026-10-14 — client annotations: Modbus, dual radios (4 per slave), ~50 devices per slave; per-pole devices and one radio per device confirmed; section count left open.
+- 2026-10-21: aligned with spec pack v0.1 (pointer to the M1 pack, 120 s cycle, proposed dev board and bench set).
 
 Back to [[Index]]

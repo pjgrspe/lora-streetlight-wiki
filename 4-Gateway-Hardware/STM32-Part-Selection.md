@@ -9,6 +9,7 @@ Which STM32 runs the gateways and which runs the devices. The gateways use **one
 - **The Blue Pill is not for gateways.** It has too few SPI buses and pins for 4 radios, and no on-board debugger.
 - **The devices are Blue Pill STM32F103C8 + SX1276** (another developer's firmware). The device-role protocol library must fit ≤16 KB flash / ≤3 KB RAM, bare-metal, with no FPU.
 - **Redundant radio pairs share nothing:** separate SPI bus, reset line, LDO/fused rail, antenna and coax.
+- **Three SPI buses are needed:** SPI1 and SPI2 split each radio pair, and SPI3 carries the FRAM and NOR. The proposed NUCLEO-L476RG pin map is in spec 06 §3 (v0.1), every pin still ⚠ to verify.
 
 ## Gateway board requirements
 
@@ -18,12 +19,31 @@ Worst case is a Slave with 4 SX1276 radios:
 |---|---|
 | 4 × SX1276 (NSS, DIO0, DIO1, NRESET each; optional DIO2/3) | ~16–20 GPIO |
 | 2 SPI buses: primary and backup radio of each pair on different buses ([[Dual-Radio-Redundancy-And-Coexistence]]) | SPI1 + SPI2 |
-| FRAM / NOR storage | SPI3, or share a bus |
-| RS485 to the server (Master): TX, RX, DE | 1 USART |
+| FRAM / NOR storage | **SPI3** (never on a radio bus) |
+| RS485 to the server (Master): TX, RX, DE | USART1 with hardware DE |
 | Console | ST-LINK virtual COM port (USART2) |
 | RTC with battery backup; RNG for nonces and join backoff | on-chip |
 
 That is ~30 pins, which rules out 32-pin boards (Nucleo-32) and the Blue Pill.
+
+### Proposed allocation on NUCLEO-L476RG
+
+Specified in `Specs/specs/06-gateway-hardware-requirements.md` §3 (v0.1). In short:
+
+| Function | Pins |
+|---|---|
+| SPI1: primary radios (Master R1; Slave U1 + D1) | PA5 / PA6 / PA7 |
+| SPI2: backup radios (Master R2; Slave U2 + D2) | PB13 / PB14 / PB15 |
+| SPI3: FRAM + NOR | PC10 / PC11 / PC12 |
+| RS485 (Master) | USART1: PA9 TX, PA10 RX, PA12 DE |
+| Console | USART2 on the ST-LINK virtual COM port, PA2 / PA3 (reserved) |
+| Radio DIO0/DIO1 | PC0–PC3, PB4, PC5–PC7: eight distinct EXTI lines |
+
+- ⚠ **PA5 also drives the user LED LD2** through solder bridge SB21. Open SB21 on the bench boards so the LED doesn't load the SPI1 clock.
+- ⚠ PA11/PA12 are also USB pins; confirm nothing is fitted on them.
+- ⚠ Every pin must be checked against UM1724 and the L476RG datasheet before wiring (spec 06 O-06-1).
+
+**Bench set from week 2** (SOW assumption A7, spec 06 §12): 3 NUCLEO-L476RG (1 Master + 2 Slaves), 10 SX1276 915 MHz modules (2 + 4 + 4), 3 FRAM/NOR breakouts, an isolated USB-RS485 adapter; from M4, 1 meter + 6 LED devices from the device developer.
 
 ## Gateway board options
 
@@ -86,10 +106,12 @@ SX1276 **915 MHz** variants only: HopeRF **RFM95W-915** (or a breakout of it), o
 
 - Research synthesis, 2026-09-09. STM32WLE5CC: https://www.st.com/en/microcontrollers-microprocessors/stm32wle5cc.html · AN5457 RF matching: https://www.st.com/resource/en/application_note/an5457-rf-matching-network-design-guide-for-stm32wl-series-stmicroelectronics.pdf · flash organisation from the ST STM32WL5 FLASH training deck · RAK3172: https://docs.rakwireless.com/product-categories/wisduo/rak3172-module/overview/
 - Project owner, 2026-10-14: client supplies STM32 dev boards + SX1276 modules; devices on Blue Pill; separate gateway hardware developer.
+- `Specs/specs/06-gateway-hardware-requirements.md` (v0.1, 2026-10-21).
 
 ## History
 
 - 2026-09-09: STM32WLE5 / RAK3172-T recommended, with STM32G0B1 + SX1262 as fallback.
 - 2026-10-14: Client specified SX1276 and up to 4 radios per gateway, so moved to a common STM32 + external SX1276 board. NUCLEO-L476RG recommended. Devices confirmed on Blue Pill; device-constraint table added.
+- 2026-10-21: aligned with spec pack v0.1 (third SPI bus required, proposed pin map, SB21/PA5 note, bench set).
 
 Back to [[Index]]

@@ -43,7 +43,7 @@ Use a hierarchical logical ID, independent of DALI:
 site / section / device (pole) / dali_short_addr  →  pole_id (GPS-tagged)
 ```
 
-Support four command target types: `broadcast`, `group`, `short`, `logical_pole_id`, and let the gateways resolve them. See [[Device-Identity-Namespaces]].
+Command targets are the 12-bit radio address of a device, a whole section, the whole site, or one of 16 groups (`0x8000 | g`); the server maps pole IDs to device addresses (spec 01 §8, spec 00 §3). Inside the pole the device addresses its driver by broadcast or a fixed short address. See [[Device-Identity-Namespaces]].
 
 ## Related
 
@@ -54,11 +54,13 @@ Support four command target types: `broadcast`, `group`, `short`, `logical_pole_
 
 ## Sources
 
+- `Specs/specs/00` §3, `Specs/specs/01` (command targets), v0.1.
 - Research synthesis, 2026-09-09. DALI Alliance cable-length tech note: https://www.dali-alliance.org/tech-notes/cable-length.html · D4i bus supply app note: https://www.inventronics-co.com/wp-content/uploads/2021/11/Application-Note-DALI-Bus-Supplies-and-Auxiliary-Supplies-Rev.-A.pdf · https://support.zencontrol.com/hc/en-us/articles/10310600966671-Maximum-Dali-Cable-Lengths
 
 ## History
 
 - 2026-09-09: identified that one DALI bus per section cannot be built; per-pole vs multi-channel left as the project's biggest open fork.
 - 2026-10-14: resolved per-pole, from the client's revised architecture (one device per pole confirmed by the project owner).
+- 2026-10-21: aligned with spec pack v0.1 (command target types).
 
 Back to [[Index]]

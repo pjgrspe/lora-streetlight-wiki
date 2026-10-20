@@ -7,7 +7,7 @@ DALI (IEC 62386) is the digital control interface between each per-pole LoRa LED
 - A "DALI street light" is **a luminaire whose LED driver has a DALI interface** (Device Type 6, Part 207). There is no DALI lamp.
 - In this system each DALI link is **short and inside one pole**, run by the per-pole device (device developer). The radio carries the distance. See [[DALI-Bus-Length-Constraint]].
 - **DALI is slow: ~25 ms per query-response, one byte per memory read.** Deep diagnostics must be scheduled and cached by the device, never fetched on demand over LoRa.
-- **Carry the level as the raw 0–254 byte everywhere**; convert to % in exactly one place. The default curve is logarithmic: 50% perceived ≈ level 180.
+- **Carry the level as the raw 0–254 byte everywhere**; convert to % in exactly one place. The specs do this: radio frames and Modbus carry DALI arc levels, and only the server converts to percent (spec 00 §2.2). The default curve is logarithmic: 50% perceived ≈ level 180.
 - `POWER ON LEVEL` and `SYSTEM FAILURE LEVEL` are the fail-safe hooks, mandatory in every DALI generation. See [[Fail-Safe-Lighting-Rule]].
 
 ## Bus physical layer
@@ -66,8 +66,8 @@ On an in-pole link with one driver, broadcast or a fixed short address is enough
 **Configuration (non-volatile in the driver; none of it survives a driver swap):**
 
 - **MIN / MAX LEVEL**: clamp window. MIN cannot go below the read-only PHYSICAL MINIMUM. ⚠ Mixed driver models with different physical minima in one view give **visibly uneven dimming at the low end**.
-- **POWER ON LEVEL** and **SYSTEM FAILURE LEVEL**: fail-safe hooks, default 254.
-- **FADE TIME** (index 0–15, default 7 = 5.7 s) and **FADE RATE** (default 7 = 44.7 steps/s). √2 steps: index 10 = 16 s, 13 = 45.3 s, 15 = 90.5 s. DALI-2 adds extended fade up to 16 min. **Prefer long fades (16–90 s) on roadways**: abrupt changes read as flicker, and slow ramps cut inrush when many lights change together.
+- **POWER ON LEVEL** and **SYSTEM FAILURE LEVEL**: fail-safe hooks, both set to 254 by the device (spec 05 §6; 250 for System Failure is a client option).
+- **FADE TIME** (index 0–15, default 7 = 5.7 s) and **FADE RATE** (default 7 = 44.7 steps/s). √2 steps: index 10 = 16 s, 13 = 45.3 s, 15 = 90.5 s. DALI-2 adds extended fade up to 16 min. **Spec 05 uses index 7–10 (5.7–16 s) for scheduled changes**: long enough to avoid visible flicker and cut inrush when many lights change together, short enough that a group command visibly completes within seconds. Commands carry their own fade index.
 
 ## The dimming curve
 
@@ -106,11 +106,13 @@ Lamp and gear failure are **decided inside the driver**; the controller cannot v
 
 ## Sources
 
+- `Specs/specs/00` §2.2, `Specs/specs/05` §6 (v0.1).
 - Research synthesis, 2026-09-09. DALI Alliance IEC 62386 parts: https://www.dali-alliance.org/standards/IEC62386.html · bus levels and opcodes: https://jared.geek.nz/2025/06/dali-lighting-protocol/ · Ozuno DALI Advanced Theory: https://ozuno.com/downloads/training/02%20-%20DALI%20ADVANCED%20THEORY.pdf · status byte: https://support.zencontrol.com/hc/en-us/articles/7093947995535
 
 ## History
 
 - 2026-09-09: written for one DALI bus per section driven from a section controller.
 - 2026-10-14: system went per-pole; DALI links are now in-pole and run by the device developer's device. Timing and group sections adapted.
+- 2026-10-21: aligned with spec pack v0.1 (arc levels end to end, fail-safe levels 254, fade index 7–10).
 
 Back to [[Index]]

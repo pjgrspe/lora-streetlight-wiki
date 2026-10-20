@@ -9,6 +9,7 @@ How the gateway survives a Philippine roadside cabinet. **Surge and condensation
 - **Single-point earthing**, target **5 Ω** (high-lightning area). Measure and record it at commissioning.
 - **Design for 70–75 °C internal (80 °C worst case).** Use 105 °C parts and polymer/ceramic capacitors.
 - **Humidity:** a Gore-type vent, conformal coating, vertical PCB with a drain path. A sealed cabinet condenses every night.
+- These items are now numbered requirements in spec 06 (HW-60…HW-94), each with a verification method.
 - **Multiple radios mean multiple antennas and coax runs.** Each radio has its own N-type bulkhead, arrester and LMR-240+ run, with the antennas as far apart as practical (vertical stacking is best). ⚠ In-box isolation (~17–28 dB estimated) still isn't enough for simultaneous TX/RX, so measure it ([[Dual-Radio-Redundancy-And-Coexistence]]).
 
 ## Mains AC-DC
@@ -69,7 +70,8 @@ With EIRP capped at **16 dBm**, every dB of cable is a dB of link margin, and on
 - Each connector pair costs 0.1–0.3 dB, so minimise adapters.
 - **N-type outdoors, not SMA.** SMA is not weatherproof and corrodes.
 - **Weatherproof every outdoor connector** (self-amalgamating tape, then vinyl). Water in coax raises loss gradually and presents as "the link got worse over six months."
-- **Antenna gain counts toward EIRP.** Set PA output in firmware so PA + antenna gain − cable loss ≤ 16 dBm ([[Philippines-Regulatory-Context]]).
+- **Antenna gain counts toward EIRP.** Set PA output in firmware so PA + antenna gain − cable loss ≤ 16 dBm ([[Philippines-Regulatory-Context]]). The installer records each radio's antenna gain and cable loss; the firmware sets conducted power from them (spec 06 HW-84).
+- Antennas of one box as far apart as practical, vertical stacking preferred, ≥1 m target. The final spacing comes from the in-box isolation test in spec 06 §11.
 
 ## EMC and compliance
 
@@ -86,11 +88,13 @@ With EIRP capped at **16 dBm**, every dB of cable is a dB of link margin, and on
 
 ## Sources
 
+- `Specs/specs/06-gateway-hardware-requirements.md` §7–§11 (v0.1, 2026-10-21).
 - Research synthesis, 2026-09-09. IRM-10-5: https://www.digikey.com/en/products/detail/mean-well-usa-inc/IRM-10-5/7704657 · IEC 61643-11: https://lsp.global/iec-61643-11-ac-surge-protector-standard-performance-safety/ · coax GDT arrestors: https://citel.us/en/gas-tube-surge-arrestors-for-coaxial-line-protection · IEC 62305 Metro Manila worked example: https://filipinoengineer.com/blog/2025/11/determination-and-calculation-of-lightning-protection-levels-lpl-based-on-iec-62305-with-application-to-an-industrial-building-in-metro-manila-philippines.html. ⚠ Coax loss figures are typical manufacturer values; confirm against the specific cable datasheet.
 
 ## History
 
 - 2026-09-09: Written for a single-radio gateway.
 - 2026-10-14: Updated for multiple radios per box (one antenna/coax/arrester each, per-radio rails) and the decided 16 dBm EIRP cap. The gateway hardware itself is built by the separate hardware developer.
+- 2026-10-21: aligned with spec pack v0.1 (requirements numbered in 06, EIRP recording rule, antenna spacing set by the isolation test).
 
 Back to [[Index]]

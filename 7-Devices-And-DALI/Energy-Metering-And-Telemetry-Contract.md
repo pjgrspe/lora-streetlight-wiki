@@ -8,7 +8,8 @@ What the section energy meters measure, what the server needs from them, and how
 - **Class 1 (IEC 62053-21)** is enough: this is the customer's own instrumentation, not revenue metering. Prefer **direct-connect** over CTs.
 - **Fault detection has three independent layers:** per-pole status (identity), driver diagnostics (the *why*, only if D4i), and meter power reconciliation (counts).
 - With per-pole devices, **per-light fault identity is guaranteed**; only the diagnostic *why* depends on driver capability.
-- Every value lands in the gateway cache with **age and quality**, never bare ([[Cache-Behind-Synchronous-Wire-Pattern]]).
+- Every value lands in the gateway cache with **its age**, never bare ([[Cache-Behind-Synchronous-Wire-Pattern]]).
+- **On the radio:** the meter sends a 44-byte REPORT in a double slot every cycle (120 s) to its slave; the slave forwards a meter record to the master every 5 min. Per-pole devices send a 20-byte REPORT every cycle. Specified in `Specs/specs/03-tier2-device-protocol.md` §7 (v0.1).
 
 ## What a 3-phase meter provides
 
@@ -43,17 +44,29 @@ The meter is behind a LoRa device, but its internal register conventions still m
 
 ## Telemetry contract per section meter
 
-| Priority | Point | Cadence | Why |
-|---|---|---|---|
-| 1 | **ΣkWh import** (cumulative, monotonic) | 5 min | Ground truth for savings and bill reconciliation |
-| 2 | P per phase and total | 60 s | Primary fault-detection signal |
-| 3 | V per phase | 60 s | Brownout/over-voltage; **a leading indicator of driver failures** |
-| 4 | I per phase + **I_neutral** | 60 s | Unbalance |
-| 5 | PF total | 60 s | Driver-population health |
-| 6 | Frequency | 60 s | Grid-event correlation |
-| 7 | THD-I | daily | Driver degradation trend |
+| Priority | Point | Why |
+|---|---|---|
+| 1 | **ΣkWh import** (cumulative, monotonic), plus export | Ground truth for savings and bill reconciliation |
+| 2 | P per phase and total | Primary fault-detection signal |
+| 3 | V per phase | Brownout/over-voltage; **a leading indicator of driver failures** |
+| 4 | I per phase + **I_neutral** | Unbalance |
+| 5 | PF total | Driver-population health |
+| 6 | Frequency | Grid-event correlation |
+| 7 | THD-I | Driver degradation trend |
 
-The cell schedule in [[Slave-Cell-Capacity-And-Scheduling]] carries these cadences.
+**All seven are in every meter REPORT** (44 bytes, plus wye/delta and phase-loss flags and a fault code), sent once per cycle. The cadence at each hop:
+
+| Hop | Cadence |
+|---|---|
+| Meter → slave | Every cycle (120 s default) |
+| Slave → master | Meter record every 5 min; phase loss and mains loss as immediate events |
+| Master → server | Whenever the server polls the meter block (spec 01) |
+
+The 5-minute forwarding interval comes from the slave's duty-cycle budget ([[LoRa-Airtime-Budget]]). Phase loss doesn't wait for it: the meter raises `METER_PHASE_LOSS` and the slave raises `PHASE_LOSS` / `MAINS_LOSS` events at once.
+
+## Per-pole device telemetry
+
+Each LED device's 20-byte REPORT carries: status bits, actual and target level (DALI arc 0–254), input power, supply voltage and current, cumulative energy, temperature, lamp hours, a fault code and the last executed command. Fields the hardware can't measure are sent as "not available" (all bits set). The slave forwards basic per-device records (status, level, power, energy) every 15 min, and extended ones (voltage, current, lamp hours, link quality) hourly. Status changes go up at once.
 
 ## Derived at the server
 
@@ -81,11 +94,13 @@ Layer 3 alone gives counts, not identities; layer 1 now provides identity becaus
 
 ## Sources
 
+- `Specs/specs/03-tier2-device-protocol.md` §7, `Specs/specs/02-tier1-protocol.md` (DETAIL records), `Specs/specs/04-channel-plan-and-airtime.md` §7 (v0.1).
 - Research synthesis, 2026-09-09. IEC 62053-22:2020: https://webstore.iec.ch/en/publication/29987 · Eastron SDM630 register list: https://modbusmanager.com/eastron-sdm630-modbus.html · fault signatures: https://www.frontiersin.org/journals/sensors/articles/10.3389/fsens.2026.1905827/full
 
 ## History
 
 - 2026-09-13: existing off-the-shelf drivers chosen; layer 2 became optional.
 - 2026-10-14: per-pole devices make layer 1 (identity) always available; meters are one per section with the section count not fixed.
+- 2026-10-21: aligned with spec pack v0.1 (meter and LED REPORT contents, per-hop cadence: every 120 s cycle to the slave, 5 min meter / 15 min device detail to the master).
 
 Back to [[Index]]

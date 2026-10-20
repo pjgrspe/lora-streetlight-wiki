@@ -15,10 +15,10 @@ Why this project runs its own MAC on the LoRa radio instead of using LoRaWAN, an
 | LoRaWAN provides | We build instead |
 |---|---|
 | MAC framing: DevAddr, FCtrl, FCnt, FPort, FOpts, MIC | Our own frame format: [[Custom-Protocol-Frame-Design]] |
-| OTAA join: DevEUI/JoinEUI/AppKey → session keys, nonce anti-replay | A pairing and provisioning protocol |
+| OTAA join: DevEUI/JoinEUI/AppKey → session keys, nonce anti-replay | Our own join/rejoin with keys derived from a site key ([[Custom-Protocol-Security]]) |
 | Two-level crypto: NwkSKey (integrity) + AppSKey (confidentiality) | AES key schedule, MIC, storage, rotation, in software on our MCUs: [[Custom-Protocol-Security]] |
 | 32-bit frame counters with a defined replay window | Counter design, wraparound, reboot persistence |
-| **ADR**: network-driven SF and power adaptation | Our own link-quality → SF controller (capped at SF10) |
+| **ADR**: network-driven SF and power adaptation | Nothing in v1: one fixed SF per tier (SF7 tier 1, SF9 per cell). Links are fixed by placement |
 | Classes A/B/C: defined downlink windows, beacons, ping slots | Our own downlink and slot scheduling: [[Continuous-Receive-Downlink]], [[Slave-Cell-Capacity-And-Scheduling]] |
 | Regional Parameters: vetted channel plans, dwell/duty enforcement, payload tables | Our own compliance logic, **and the liability**: [[Philippines-Regulatory-Context]] |
 | Network and application server ecosystem, dedup, gateway diversity | Master Gateway + Local Monitoring Server |
@@ -50,11 +50,13 @@ The project now has a LoRa device on every pole: well over a hundred radio nodes
 
 ## Sources
 
+- `Specs/specs/00-common-frame-and-conventions.md`, `03-tier2-device-protocol.md` (v0.1, 2026-10-21)
 - Research synthesis, 2026-09-09. https://www.thethingsnetwork.org/docs/lorawan/what-is-lorawan/ · TS011 Relay: https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay · https://www.leverege.com/blogpost/a-primer-for-loralorawan
 
 ## History
 
 - 2026-09-09: Justified custom MAC for a 6–10 node polled network.
 - 2026-10-14: Per-pole devices made the network LoRaWAN-sized; justification now rests on the two-tier scheduled topology and dual radios.
+- 2026-10-21: aligned with spec pack v0.1: no ADR (fixed SF per tier); join design specified.
 
 Back to [[Index]]

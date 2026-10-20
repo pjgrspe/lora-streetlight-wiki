@@ -8,7 +8,7 @@ How far the radios will really reach, and how to prove it on site before freezin
 - Urban path loss falls off at **n ≈ 3.8**, not 2. A ~132 dB budget buys roughly **0.3–1.5 km**, not 10 km.
 - **Design targets:** slave → device links ≤500 m; master → slave links ≤1.5 km with elevated antennas.
 - **Height beats gain.** Getting slaves above the luminaire/tree/jeepney line is the cheapest dB available.
-- SF11/SF12 are unusable here, so a link that doesn't close at SF10 needs height or placement, not more SF.
+- SF11/SF12 are unusable here, and v1 stops at **SF9 in cells and SF7–SF8 on tier 1**. A link that doesn't close at those needs height or placement, not more SF.
 - **Survey with the real radios at real heights**, soak 24 h+, and demand ≥15 dB margin (25 dB in vegetation).
 
 ## The worksheet
@@ -70,7 +70,7 @@ A street-light-height antenna on a tree-lined street can't meet this. That is wh
 ## Site survey protocol
 
 1. **Survey with the actual radios (SX1276), at the actual heights, with the actual antennas.** Simulations lie.
-2. Record RSSI/SNR/PER at every planned slave location and a sample of pole positions, at the working SF and at SF10. Record the **noise floor separately**, with all transmitters off.
+2. Record RSSI/SNR/PER at every planned slave location and a sample of pole positions, at the working SF (SF9 for device links, SF7 for master↔slave links), and one step slower for margin information. Record the **noise floor separately**, with all transmitters off.
 3. **Soak each link 24 h+** to catch diurnal interference and thermal effects. Take at least one measurement in rain.
 4. Acceptance: **≥15 dB margin at the working SF**. Design target ~25 dB in vegetated tropical terrain, because **foliage attenuation is seasonal**: a link commissioned in the dry season at 8 dB margin will fail in the wet season.
 5. **Scan 915–918 MHz for existing occupancy** before fixing the channel plan. Only 3 MHz is available, and it's shared.
@@ -87,10 +87,12 @@ A street-light-height antenna on a tree-lined street can't meet this. That is wh
 
 ## Sources
 
+- `Specs/specs/04-channel-plan-and-airtime.md` §4 (v0.1, 2026-10-21)
 - Research synthesis, 2026-09-09. COST-231: https://www.rfwireless-world.com/terminology/okumura-hata-model-cost-231-extension · measurement error: https://arxiv.org/pdf/2510.23152 · tropical/forest path loss at 923 MHz: https://pmc.ncbi.nlm.nih.gov/articles/PMC13210814/
 
 ## History
 
 - 2026-10-14: The legal +16 dBm EIRP is now the design case (Philippine profile adopted); SX1276 radios; SF escalation capped at SF10; separate antennas for redundant radios.
+- 2026-10-21: aligned with spec pack v0.1: working SFs are SF9 (cells) and SF7 (tier 1); no SF10 fallback in v1.
 
 Back to [[Index]]

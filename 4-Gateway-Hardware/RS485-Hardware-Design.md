@@ -9,6 +9,7 @@ The RS485 link carries Modbus RTU between the Local Monitoring Server and the Ma
 - **Bias values don't port between rails:** 560 Ω suits 5 V; at 3.3 V you need 300–390 Ω. Better: run the bias from the ADM2587E's isolated 5 V side.
 - **Hardware DE timing can't enforce the Modbus 3.5-character gap.** That gap must be a software timer.
 - **Default 19200 8E1**, with 9600 and 115200 selectable. Two-stage surge protection (GDT → series resistor → SM712) for outdoor runs.
+- On NUCLEO-L476RG: **USART1, PA9 TX / PA10 RX, PA12 = hardware DE** (proposed in spec 06 §3, ⚠ verify). Fallback: USART3 on PC4/PC5/PB1.
 
 ## Transceiver
 
@@ -41,7 +42,7 @@ With two 120 Ω terminations (60 Ω) on a 5 V rail, `V_diff = 5 × 60 / (60 + 2�
 
 ## DE/RE control
 
-STM32 USARTs drive the transceiver's Driver Enable in hardware: `CR3.DEM` enables it, `CR3.DEP` sets polarity, `CR1.DEAT` / `CR1.DEDT` set assertion/de-assertion time in 1/8 or 1/16 bit units.
+STM32 USARTs drive the transceiver's Driver Enable in hardware (USART1_DE on PA12 in the proposed pin map): `CR3.DEM` enables it, `CR3.DEP` sets polarity, `CR1.DEAT` / `CR1.DEDT` set assertion/de-assertion time in 1/8 or 1/16 bit units.
 
 **The limit:** maximum de-assertion delay is ~1.94 bit times (202 µs at 9600 baud). Modbus RTU needs **3.5 character times (≈4.01 ms at 9600 8N1)** of inter-frame silence. `DEDT` handles transceiver turnaround only; **the 3.5T gap must be a software timer** ([[Firmware-Architecture]]).
 
@@ -75,11 +76,13 @@ At 9600 8N1: 1 char = 1.146 ms, t1.5 = 1.72 ms, t3.5 = 4.01 ms, DE de-assert = 1
 
 ## Sources
 
+- `Specs/specs/06-gateway-hardware-requirements.md` §4 (HW-20…HW-26) and `Specs/specs/01-modbus-register-map.md` (serial settings), v0.1.
 - Research synthesis, 2026-09-09. ADM2582E/2587E datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/adm2582e-2587e.pdf · TI fail-safe biasing: https://www.ti.com/lit/pdf/ssztak0 · Littelfuse SM712 · ADI staged surge circuit: https://www.analog.com/en/resources/analog-dialogue/articles/safeguard-your-rs-485-communication-networks.html · Modbus over Serial Line V1.02
 
 ## History
 
 - 2026-09-09: Written.
 - 2026-10-14: Restructured; STM32WL references made MCU-neutral (gateway MCU is now a general STM32, see [[STM32-Part-Selection]]).
+- 2026-10-21: aligned with spec pack v0.1 (USART1 on PA9/PA10 with DE on PA12; requirements HW-20…HW-26).
 
 Back to [[Index]]

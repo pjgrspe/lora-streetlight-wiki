@@ -61,7 +61,7 @@ Suites, in priority order:
 ## Logging, three tiers
 
 1. **Development: SEGGER RTT** over SWD (or SWO/ITM). Compile-time-filtered levels so release builds strip the strings; 300 log sites at ~40 B each is 12 KB you don't want to ship.
-2. **Field, local: a RAM ring plus the serial console.** 4–8 KB, **binary-encoded** `{u32 tick, u8 level, u8 module, u16 code, u32 arg1, u32 arg2}` = 16 B per entry, with the human-readable strings held **off-device** in a table keyed by `code`. Dumpable via a console command *and* a Modbus mailbox opcode.
+2. **Field, local: a RAM ring plus the serial console.** 4–8 KB, **binary-encoded** `{u32 tick, u8 level, u8 module, u16 code, u32 arg1, u32 arg2}` = 16 B per entry, with the human-readable strings held **off-device** in a table keyed by `code`. Dumpable via a console command, and later via a diagnostic opcode (the `0x80`–`0xFF` range is reserved for that and never used in production).
 3. **Field, remote:** the Modbus diagnostic block plus a persisted fault log. The server polls `crash_count`, `iwdg_reset_count`, the per-radio counters and `fault_bitmap` every cycle and alarms on changes ([[Gateway-Observability]]).
 
 **Never log from an ISR to anything that can block. Never log inside the Modbus response path. Rate-limit every log site that could fire in a loop.**
@@ -81,5 +81,6 @@ Suites, in priority order:
 
 - 2026-09-09: written for an STM32WLE5 master gateway with one radio.
 - 2026-10-14: retargeted to STM32L4 Nucleo gateways and Blue Pill devices. Added the device-role build target, shared test vectors, failover and 60-device cell tests, and in-box isolation measurement.
+- 2026-10-21: aligned with spec pack v0.1 (diagnostic opcodes are in the reserved 0x80+ range).
 
 Back to [[Index]]

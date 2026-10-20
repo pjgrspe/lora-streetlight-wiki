@@ -4,7 +4,7 @@ How the lights decide when to switch and how far to dim. The decision: **astrono
 
 ## Key points
 
-- **Astronomical schedule computed locally** from lat/long + date, in the Master, every Slave Gateway, and (as a fallback) every per-pole device.
+- **Astronomical schedule computed locally** from lat/long + date, in the Master, every Slave Gateway and **every per-pole device, in every state**. The device's own schedule is what switches its lamp each night.
 - **The nightly on/off costs zero radio traffic.** The network is for supervision and override, not the routine switch.
 - Photocells may only force lights **on**, never off.
 - **Measured savings run well below modelled ones** (PNNL): compare commanded → predicted → measured power.
@@ -27,16 +27,18 @@ How the lights decide when to switch and how far to dim. The decision: **astrono
 | Level | Role |
 |---|---|
 | Local Monitoring Server | Edits offsets and dimming profiles; pushes them down. Not in the run-time path |
-| Master Gateway | Computes and distributes; validates |
-| Slave Gateways | **Decide autonomously** for their section ([[Slave-Gateways-As-Intelligent-Sub-Controllers]]) |
-| Per-pole devices | Hold a **fallback schedule** so a dead slave doesn't leave the pole uncontrolled (device developer) |
+| Master Gateway | Computes, distributes (`SET_SCHEDULE`) and validates |
+| Slave Gateways | Hold the section's schedule and keep running it when the Master is lost ([[Slave-Gateways-As-Intelligent-Sub-Controllers]]); push it to their devices |
+| Per-pole devices | **Run the schedule locally, always**, with up to 4 dimming steps. If they lose their slave they switch to **fallback**: the same dusk/dawn times at 100%, no dimming (device developer; spec 05 DD-3) |
 | DALI driver | `SYSTEM FAILURE LEVEL` / `POWER ON LEVEL` = 100% as the last layer ([[Fail-Safe-Lighting-Rule]]) |
+
+The schedule travels as one command, `SET_SCHEDULE`: latitude, longitude, dusk and dawn offsets, and up to **4 dimming steps** (local time + level). Levels are DALI arc levels 0–254. Overrides (`SET_LEVEL` with a lifetime, max 720 min) always expire, and `RESUME_SCHEDULE` ends one early. Specified in `Specs/specs/02-tier1-protocol.md` §11 and `03` §10 (v0.1).
 
 ## Dimming profiles
 
 1. **Full-night constant**: baseline.
 2. **Midnight / part-night dimming**: e.g. 100% to 00:00, 50% to 05:00, 100% to dawn.
-3. **Multi-step adaptive**: 100/70/50/70% by traffic band. Sent as group commands with `execute_at`, so a whole section changes together ([[Popcorn-Effect-And-Scheduled-Execution]]).
+3. **Multi-step adaptive**: 100/70/50/70% by traffic band (fits the 4 steps of `SET_SCHEDULE`). Sent as group commands with `execute_at`, so a whole section changes together ([[Popcorn-Effect-And-Scheduled-Execution]]).
 4. **Part-night switch-off**: **not on public roads** without an explicit LGU safety and liability decision.
 5. **CLO (Constant Light Output)**: start dimmed and raise power as the LED depreciates (L80@16 yr ≈ start 20% dimmed, add 20 points linearly). ⚠ CLO can live in the driver **or** in the control system (using Part 253 on-time). **Pick one**; both double-compensate.
 
@@ -80,11 +82,13 @@ LED retrofit alone saves **~64%** versus HPS. Dimming adds a nominal 25%; **expe
 
 ## Sources
 
+- `Specs/specs/02`, `03`, `05` (v0.1, 2026-10-21).
 - Research synthesis, 2026-09-09. PNNL-32949: https://www.pnnl.gov/main/publications/external/technical_reports/PNNL-32949.pdf · autonomous astro-calendar control as commercial norm: https://intelilight.eu/intelligent-street-lighting-control/ · CLO: https://www.ligman.com/clo-constant-lumen-output-and-night-dimming/ · DPWH spec summary (secondary): https://www.sresky.com/dpwh-road-lighting-specifications-why-are-high-lumen-output-and-typhoon-resistance-key-metrics-for-philippine-government-projects/
 
 ## History
 
 - 2026-09-09: written with schedules in the slave gateways "and ideally in the driver devices".
 - 2026-10-14: per-pole devices now hold a fallback schedule; group dimming moved to radio group commands with `execute_at`.
+- 2026-10-21: aligned with spec pack v0.1 (devices run the schedule locally in every state; fallback = 100% dusk to dawn; SET_SCHEDULE with up to 4 steps; overrides expire).
 
 Back to [[Index]]

@@ -5,7 +5,7 @@ The radio rules the system is designed to, and what is still unconfirmed. The pr
 ## Key points
 
 - **Band: 915–918 MHz** (NTC allocation; LoRa Alliance AS923-3 for the Philippines). Not 868 MHz, not US 902–928 MHz, not 433 MHz.
-- **Working profile:** 125 kHz channels on a 200 kHz raster (~15 channels), **≤16 dBm EIRP**, **≤400 ms per transmission** (SF7–SF10 only), **≤1% duty cycle accounted per box**.
+- **Working profile:** 125 kHz channels on a 200 kHz raster (**14 channels, 915.2–917.8 MHz**), **≤16 dBm EIRP**, **≤400 ms per transmission** (SF7–SF10 only), **≤1% duty cycle accounted per box**.
 - Band, channel plan and TX power are **configuration parameters** with a compile-time regional ceiling — a different NTC answer is a config change, not a rewrite.
 - ⚠ **Not settled:** whether the band is licence-exempt, and NTC's confirmed EIRP/duty/dwell figures. **The letter to NTC is still required.**
 - Type approval is mandatory and per RF module.
@@ -15,13 +15,15 @@ The radio rules the system is designed to, and what is still unconfirmed. The pr
 | Parameter | Value |
 |---|---|
 | Band | 915–918 MHz (3 MHz) |
-| Channel width / raster | 125 kHz on 200 kHz spacing, ~15 channels |
-| Channel use | 2 tier-1 channels at opposite band edges + 2 per section ([[Dual-Radio-Redundancy-And-Coexistence]]) |
+| Channel width / raster | 125 kHz on 200 kHz spacing, 14 channels (915.2–917.8 MHz) |
+| Channel use | Tier 1 on ch 0 (915.2) + ch 13 (917.8); section n on ch n + ch n+6 ([[Dual-Radio-Redundancy-And-Coexistence]]) |
 | Max EIRP | 16 dBm (antenna gain counts) |
-| Max single transmission | 400 ms → SF7–SF10; SF11/SF12 unusable ([[LoRa-Airtime-Budget]]) |
+| Max single transmission | 400 ms → SF7–SF10 allowed; v1 uses SF7–SF9; SF11/SF12 unusable ([[LoRa-Airtime-Budget]]) |
 | Duty cycle | ≤1%, ledger kept per box (multi-radio treatment unconfirmed — [[Open-Questions]] Q21) |
 
-Because the channel plan grows by two per section, the section count ([[Open-Questions]] Q27) and the usable channel count are linked: roughly 6 sections fit before channels must be reused across distance.
+Because the channel plan grows by two per section, the section count ([[Open-Questions]] Q27) and the usable channel count are linked: 6 sections fit before channel pairs must be reused across distance.
+
+**The duty-cycle question decides the status cycle.** Under one 1% budget per box, a slave fits a 120 s cycle (66% of budget) but not 60 s (~112%). If NTC allows one budget per radio, 60 s becomes possible ([[LoRa-Airtime-Budget]]).
 
 ## What is verified
 
@@ -62,7 +64,7 @@ Antenna gain counts. A +20 dBm SX1276 PA into a 5 dBi antenna is ~+25 dBm EIRP �
 
 ## Actions
 
-1. **Write to NTC** — Equipment Standards Division, `equipment.standard@ntc.gov.ph` — asking in writing for: (a) the text of MC 03-08-2013; (b) whether 915–918 MHz LPWAN use is licence-exempt or needs a station licence / frequency assignment; (c) max EIRP, occupied bandwidth and duty-cycle/dwell rules; (d) whether AS923-3 is accepted as a compliance profile; (e) whether a multi-radio gateway has one duty-cycle budget or one per radio.
+1. **Write to NTC** — Equipment Standards Division, `equipment.standard@ntc.gov.ph` — asking in writing for: (a) the text of MC 03-08-2013; (b) whether 915–918 MHz LPWAN use is licence-exempt or needs a station licence / frequency assignment; (c) max EIRP, occupied bandwidth and duty-cycle/dwell rules; (d) whether AS923-3 is accepted as a compliance profile; (e) whether a multi-radio gateway has one duty-cycle budget or one per radio. Answer (e) decides whether the status cycle can be 60 s instead of 120 s.
 2. **Type approval** is mandatory, per RF module. NTC accepts host approval based on the specific integrated RF module; EU standards accepted (FCC sometimes); foreign entities need a local representative; ~4–8 weeks. ⚠ Check whether the chosen SX1276 module's certification is accepted ([[Open-Questions]] Q10).
 3. Keep band, channel plan and TX power in configuration with a compile-time ceiling.
 
@@ -75,11 +77,13 @@ Antenna gain counts. A +20 dBm SX1276 PA into a 5 dBi antenna is ~+25 dBm EIRP �
 
 ## Sources
 
+- `Specs/specs/04-channel-plan-and-airtime.md` (v0.1, 2026-10-21)
 - Research synthesis, 2026-09-09. NRFAT-2016 Rev. 2: https://region7.ntc.gov.ph/wp-content/uploads/2024/01/NRFAT-2016-Rev-2.pdf · RP002-1.0.3 Table 1 p.16 · NTC circulars index: https://ntc.gov.ph/memorandum-circulars/ · Type approval: https://www.csagroup.org/global-certification-regulatory-update/philippines-ntc-type-approval-acceptance-of-equipment-based-on-specific-radio-module/
 
 ## History
 
 - 2026-09-09 — research; interim envelope 916.5–917.0 MHz core, ≤16 dBm EIRP, ≤1% duty, ≤400 ms.
 - 2026-10-14 — decided: design to the full 915–918 MHz band with the AS923-3-style profile above; duty ledger per box; NTC letter still required for licensing and confirmed limits.
+- 2026-10-21: aligned with spec pack v0.1: 14-channel raster and concrete channel assignment; v1 uses SF7–SF9; per-box vs per-radio duty decides a 120 s vs 60 s cycle.
 
 Back to [[Index]]

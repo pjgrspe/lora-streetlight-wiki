@@ -35,13 +35,13 @@ Worth a laminated card for the install crew:
 
 ## Three surfaces
 
-**1. LEDs, no laptop needed.** Minimum four, meanings printed on the enclosure label. The Nucleo dev boards have one user LED, so this belongs in the gateway hardware requirements for the final board:
+**1. LEDs, no laptop needed.** Meanings printed on the label inside the door. The final board has PWR, **one LED per radio**, FAULT and RS485 (Master) (`Specs/specs/06-gateway-hardware-requirements.md` HW-70). On the Nucleo dev boards the RS485 LED is moved to PB8, because PA5 (the user LED) is SPI1's clock:
 
 | LED | Meaning |
 |---|---|
 | `PWR` | Solid |
 | `RS485` | Blink per valid Modbus frame (Master) |
-| `LORA` | Blink per TX, double-blink per RX, slow blink = running on backup radio, fast = no peers |
+| One per radio (`R1`/`R2` or `U1`/`U2`/`D1`/`D2`) | Blink per TX, double-blink per RX, slow blink = this radio is the active standby after failover, fast = no peers, off = radio failed |
 | `FAULT` | Off = OK, slow = warning, fast = critical |
 
 **2. Serial console, the workhorse.** On the dev boards it's the ST-LINK virtual COM port. A line-oriented CLI:
@@ -65,11 +65,13 @@ rf scan             set-time         commission        factory-reset
 
 ## Sources
 
+- `Specs/specs/06-gateway-hardware-requirements.md` §10 (v0.1)
 - Research synthesis, 2026-09-09. RSSI vs SNR judgement rule: https://www.thethingsnetwork.org/docs/lorawan/rssi-and-snr/ · tropical/forest path loss at 923 MHz: https://pmc.ncbi.nlm.nih.gov/articles/PMC13210814/
 
 ## History
 
 - 2026-09-09: written for a single-radio master with DALI diagnostics gathered through the gateway.
 - 2026-10-14: diagnostics made per radio with failover state. DALI status is now reported by per-pole devices. Applies to Master and Slave gateways.
+- 2026-10-21: aligned with spec pack v0.1 (one LED per radio per HW-70; RS485 LED off PA5 on the dev boards).
 
 Back to [[Index]]

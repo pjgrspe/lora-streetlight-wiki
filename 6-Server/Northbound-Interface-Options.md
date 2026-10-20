@@ -13,7 +13,7 @@ How the Master Gateway talks upward, and how the system could later talk to outs
 
 | Option | Fit here |
 |---|---|
-| **Modbus RTU** | **Chosen.** Simple and universally supported. Weaknesses: flat untyped registers, no events (polling only), no discovery, a ~2,000-register map to maintain. Workable for a fixed site |
+| **Modbus RTU** | **Chosen.** Simple and universally supported. Weaknesses: flat untyped registers, no push (events are polled from a store-and-forward event window), no discovery, a large sparse map (16,512 registers if all 14 sections are expanded) that must be generated, not hand-maintained. Workable for a fixed site |
 | **Modbus TCP** | Same PDU without the 3.5-character timing, and transactions can be pipelined. But the gateway MCU has no Ethernet MAC, so it would need a W5500-class SPI chip. Not needed |
 | **MQTT + JSON** | Best fit for telemetry: topics mirror the hierarchy (`site/{id}/section/{n}/{meter\|driver}/telemetry`), retained messages give last-known value, LWT gives offline detection. Needs TLS (mbedTLS ≈ 60–90 KB flash, 30–50 KB RAM), so it belongs on the server |
 | **REST/HTTP** | Good for configuration, commands and history; poor for high-rate telemetry |
@@ -48,11 +48,13 @@ Services worth copying: on-demand read, schedule-based "control programs", neste
 
 ## Sources
 
+- `Specs/specs/01-modbus-register-map.md` (v0.1)
 - Research synthesis, 2026-09-09. TALQ white paper v2: https://www.talq-consortium.org/data/downloadables/5/2/4/2024-02-talq-white-paper-smart-city-protocol-specification-version-2.pdf · https://www.talq-consortium.org/2-why-talq/specification/ · OPC UA on constrained STM32: https://www.researchgate.net/publication/356950958 · STM32-as-Modbus-with-separate-translator pattern: https://www.mdpi.com/2227-7080/13/11/526
 
 ## History
 
 - 2026-09-09: written when the server stack was undecided; recommended Modbus on the gateway and a Node-RED server.
 - 2026-10-14: client confirmed Modbus; server became pgorospe's; server stack moved to [[Local-Monitoring-Server-Design]].
+- 2026-10-21: aligned with spec pack v0.1 (event window instead of "no events"; map size; map generated from CSV).
 
 Back to [[Index]]

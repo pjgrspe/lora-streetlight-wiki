@@ -9,12 +9,25 @@ The phased plan for the infrastructure side — server, master and slave firmwar
 - **Bench before field.** Nothing goes to a pole until the destructive test matrix in Gate 3 is green.
 - **Build the protocol simulator early and keep it as regression CI** — field debugging costs ~100x bench debugging.
 - Version the wire protocol and the register map from day one.
+- **The phases map onto the SOW milestones M1–M6** (table below). Phase 0 is M1, and its output is the spec pack in `Specs/`.
+
+## Phases and SOW milestones
+
+| Phase | SOW milestone | Milestone acceptance (summary) |
+|---|---|---|
+| 0 — Specification | **M1** Specifications frozen | Specs 00–07 signed by the client, device developer and hardware developer |
+| 1 — Cache and wire | **M2** Server ↔ Master link | Server polls the full register map for 24 h with zero timeouts |
+| 2 — Radios | **M3** Tier-1 radio · **M4** Device network | Master ↔ slave exchange, time sync, group commands, failover by pulling the primary antenna; a full 60-device section (real + simulated) within the designed cycle, device-channel failover, device library delivered |
+| 3 — Full topology | **M5** Monitoring and control · **M6** Integrated bench system | Dashboard, control, schedules, alarms, energy report; server + master + at least two slaves + devices, fail-safe tests passed (spec 05 §8) |
+| 4–5 — Field | Not in the current SOW | Follow-on |
 
 ## Phase 0 — Specification (no code)
 
-Deliverables: wire-format spec for both tiers (frame header, addressing, opcodes, MIC, sequence numbers); Modbus register map as a generated CSV; channel plan and airtime budget; device and telemetry data model; fail-safe state machine; failure-mode table with the required behaviour per row; gateway hardware requirements.
+Deliverables, now drafted as the spec pack (v0.1, 2026-10-21): common frame format and security (00), Modbus register map with its CSV source (01), tier-1 and tier-2 protocols (02, 03), channel plan and airtime budget (04), fail-safe behaviour table (05), gateway hardware requirements (06), server data model (07).
 
-**Gate 0:** the client signs the register map and fail-safe table; the device developer signs the tier-2 protocol; the hardware developer signs the hardware requirements. Write down "what do the lights do if X dies" for **every** X before writing firmware — see [[Failure-Modes-And-Mitigations]].
+The airtime budget set the **default cycle at 120 s** on both tiers: 60 s doesn't fit a per-box 1% duty cycle ([[LoRa-Airtime-Budget]]).
+
+**Gate 0 (= M1):** the client signs 01, 02, 04, 05 and 07; the device developer signs 03 and 05; the hardware developer signs 06. Sign-off is on the tag `spec-v1.0`. Write down "what do the lights do if X dies" for **every** X before writing firmware — see [[Failure-Modes-And-Mitigations]].
 
 ## Phase 1 — Bench: the cache and the wire
 
@@ -26,7 +39,7 @@ Modbus RTU slave serving a **static, fake** register image in under 10 ms; job s
 
 ## Phase 2 — Bench: radios, cabled
 
-Real SX1276 radios: master + one slave + device stubs, **RF-cabled with attenuators** — never over the air on the bench. Beacon/slot scheduling, time sync, scheduled device uplinks, retries, sequence numbers and MIC, duty-cycle ledger, alarm pre-emption. **Measure in-box antenna isolation** and prove the per-box TX scheduler; demonstrate primary→backup radio failover. Simulate a full 60-device cell.
+Real SX1276 radios: master + one slave + device stubs, **RF-cabled with attenuators** where possible. Beacon/slot scheduling, time sync, scheduled device uplinks, retries, sequence numbers and MIC, duty-cycle ledger, alarm pre-emption. **Measure in-box antenna isolation** with the procedure in spec 06 §11 and prove the per-box TX scheduler; demonstrate primary→backup radio failover. Simulate a full 60-device cell.
 
 **Gate 2:** latencies match the airtime model within ±30%; 10,000 injected commands produce **zero incorrect end states** under 20% packet loss with forced duplicates; the duty-cycle ledger never exceeds the limit; `PARTIAL` is reported correctly; failover works on both tiers.
 
@@ -68,10 +81,12 @@ MQTT/Sparkplug or TALQ bridge on the server, multi-site, remote access, security
 ## Sources
 
 - Research synthesis, 2026-09-09.
+- `Output/LoRa-System-Statement-of-Work.md` v6.3 §6 (milestones); `Specs/specs/04`, `05`, `06` (v0.1).
 
 ## History
 
 - 2026-09-09 — roadmap written for a master-only engagement.
 - 2026-10-14 — rescoped to server + master + slave firmware: server poller in Phase 1, coexistence and failover in Phase 2, multiple slaves and real devices in Phase 3; Phases 4–5 marked as follow-on.
+- 2026-10-21: aligned with spec pack v0.1 (phase ↔ milestone table, Gate 0 signers, 120 s cycle, isolation procedure in 06).
 
 Back to [[Index]]

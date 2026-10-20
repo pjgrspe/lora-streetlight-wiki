@@ -6,7 +6,7 @@ Every node in this system is mains-powered, so its radio can listen all the time
 
 - Permanent receive costs **~33 mW** on the SX1276: 0.03–0.1% of a street light's load. It's free.
 - Battery-oriented LoRa practice (sleep scheduling, Class A windows) **doesn't apply**; reasoning from it makes the protocol worse.
-- Continuous receive gives **sub-second unsolicited downlink**: one time-on-air (185 ms at SF9).
+- Continuous receive gives **unsolicited downlink with no announcement**: one time-on-air (~230 ms for a command at SF9), sent in the cell's downlink window or immediately for P0.
 - **Keep the scheduled superframe for uplink anyway.** Continuous RX solves downlink; TDMA solves uplink contention.
 - ⚠ **SX1276 FIFO-pointer trap in continuous RX** applies to every radio in the system. Handle it in the driver, with a dedicated host test.
 - A gateway radio is "deaf" while another radio in the same box transmits ([[Dual-Radio-Redundancy-And-Coexistence]]).
@@ -35,7 +35,8 @@ LoRaWAN Class C achieves sub-second downlink and is explicitly recommended for s
 ## How it's used
 
 - **Every device and every gateway radio sits in continuous receive**, except while transmitting, or while blanked by another radio in the same box.
-- A dimming command or emergency all-on reaches a node in **one time-on-air** rather than waiting for a poll slot. Group commands still carry `execute_at`, so every node switches at the same instant ([[Popcorn-Effect-And-Scheduled-Execution]]).
+- A dimming command or emergency all-on reaches a node in **one time-on-air** rather than waiting for a poll slot. That's why cell beacons carry no pending-command bitmap. Group commands still carry `execute_at`, so every node switches at the same instant ([[Popcorn-Effect-And-Scheduled-Execution]]).
+- **Downlink frames use inverted IQ**, uplinks normal IQ, so a listening device doesn't waste time decoding its neighbours' reports, and slaves don't hear each other's beacons.
 - On the SX1276 there's no automatic CAD-to-RX transition. Devices simply stay in RX continuous mode; CAD is used only as a pre-transmit guard ([[Media-Access-Control-Options]]).
 - **The scheduled superframe is kept for uplink.** Continuous RX and TDMA are orthogonal ([[Slave-Cell-Capacity-And-Scheduling]]).
 
@@ -59,11 +60,13 @@ Continuous receive is a latency optimisation, not a dependency. A node whose rad
 
 ## Sources
 
+- `Specs/specs/00-common-frame-and-conventions.md` §4, `03-tier2-device-protocol.md` §10 (v0.1, 2026-10-21)
 - Research synthesis, 2026-09-09. https://www.thethingsnetwork.org/docs/lorawan/classes/ · SX1276 datasheet Table 10 and continuous-Rx notes · SX1261/2 datasheet Table 4-4
 
 ## History
 
 - 2026-09-09: Recommended the SX1262's `CAD_RX` exit mode; the SX1276 FIFO trap was a caveat.
 - 2026-10-14: SX1276 chosen for every radio, so the FIFO trap is now a core driver requirement; per-pole devices are the nodes listening continuously.
+- 2026-10-21: aligned with spec pack v0.1: no pending-command bitmap (commands go any time in the downlink window), inverted IQ on downlink.
 
 Back to [[Index]]
