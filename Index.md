@@ -111,6 +111,7 @@ New to the project? Read these five, in order:
 - [[Energy-Metering-And-Telemetry-Contract]]: what to measure, and fault detection
 - [[Street-Lighting-Control-Logic]]: astronomical schedules, dimming, savings
 - [[Commissioning-And-Field-Swap]]: installing, mapping and replacing devices
+- [[DALI-Bench-Rig-And-Results]]: the first real driver on the bench: wiring, part specifications, measurements, findings
 
 ## How notes are written
 

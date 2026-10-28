@@ -78,6 +78,8 @@ The device developer builds the energy meter and the per-pole LED driver/monitor
 | **Counterfeit / clone chips are common** (CKS32, CS32, GD32 marked or remarked) | Bench-test the library on the *actual* boards supplied. Timing and flash behaviour differ on clones. ⚠ Raise with the device developer for anything beyond the prototype |
 | No on-board debugger | Device developer needs ST-LINK/V2 clones or a V3MINIE |
 
+**Bench data (2026-10-28):** Blue Pills are also sold with the **STM32F103C6** (32 KB flash, 10 KB RAM); the device developer's bench board is one. Specify the C8 and check the chip marking. The device-role library at `1d97ae8` measures **≈8.5 KB** with arm-none-eabi-gcc `-Os` on the Cortex-M3 (tier-1 formats excluded), so the 16 KB budget holds with an SX1276 driver. See [[DALI-Bench-Rig-And-Results]].
+
 The device developer's per-pole production hardware will probably be a custom board. Keep the library portable C behind `radio_if.h` / `time_if.h` / `store_if.h` so it moves with them.
 
 ## Radio modules
@@ -113,5 +115,6 @@ SX1276 **915 MHz** variants only: HopeRF **RFM95W-915** (or a breakout of it), o
 - 2026-09-09: STM32WLE5 / RAK3172-T recommended, with STM32G0B1 + SX1262 as fallback.
 - 2026-10-14: Client specified SX1276 and up to 4 radios per gateway, so moved to a common STM32 + external SX1276 board. NUCLEO-L476RG recommended. Devices confirmed on Blue Pill; device-constraint table added.
 - 2026-10-21: aligned with spec pack v0.1 (third SPI bus required, proposed pin map, SB21/PA5 note, bench set).
+- 2026-10-28: device platform: F103C6 Blue Pills exist; library measured at ≈8.5 KB on the Cortex-M3 ([[DALI-Bench-Rig-And-Results]]).
 
 Back to [[Index]]

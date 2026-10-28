@@ -27,6 +27,8 @@ Dual radios ([[Dual-Radio-Redundancy-And-Coexistence]]) reduce how often layers 
 
 In DALI-2, a control-interface interruption longer than roughly **550 ms** is a **System Failure**, after which the driver outputs its stored 1-byte System Failure Level. Set it to 100%. ⚠ Timing is from secondary sources; verify against the IEC 62386 text ([[Open-Questions]]).
 
+⚠ **Layer 4 needs the dead device to actually interrupt the bus.** With an always-on bus supply and an interface that releases the bus by itself (the bench's Pico-DALI2 lets go within 10 ms), a halted MCU leaves the bus high and the driver keeps its last level, possibly off or dimmed at night. The device board must tie bus loss to MCU failure ([[Open-Questions]] Q35, spec 05 O-05-7, [[DALI-Bench-Rig-And-Results]]).
+
 - `SYSTEM FAILURE LEVEL` and `POWER ON LEVEL` are mandatory in Part 102 across every DALI generation, so they work on old DALI-1 gear too. They are set by *command*, not by procurement.
 - ⚠ They are **per-driver configuration that does not survive a driver swap**. That makes the re-assert-configuration command in [[Commissioning-And-Field-Swap]] a safety feature, not just a convenience.
 - The documented trap, "a non-last-level power-on setting means any power interrupt lights up the whole building", is a *feature* for street lighting. Choose it deliberately and record why.
@@ -59,5 +61,6 @@ In DALI-2, a control-interface interruption longer than roughly **550 ms** is a 
 - 2026-09-13: confirmed that layer 4 survives the decision to use existing off-the-shelf DALI drivers.
 - 2026-10-14: layer 3 now sits in the per-pole devices (device-developer firmware).
 - 2026-10-21: aligned with spec pack v0.1 (both DALI levels 254 by default, 250 diagnostic as a client choice; day/night meaning of lights ON; device obligations in spec 05).
+- 2026-10-28: layer 4 caveat: a dead device must actually interrupt the DALI bus (Q35).
 
 Back to [[Index]]
