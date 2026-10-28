@@ -48,6 +48,8 @@ In the v0.1 protocol a device reports only a `d4i_available` status bit plus its
 
 **Design stance:** Parts 251/252/253 are optional enrichment; nothing in control, fault detection or fail-safe may depend on them, and capabilities are probed at commissioning. → [[DALI-Telemetry-And-D4i]], [[Energy-Metering-And-Telemetry-Contract]]
 
+**Bench driver (not necessarily the production one), 2026-10-28:** LTECH SE-12-350-700-W1DS answers as DT6, DALI-2, with no bus supply and a blank GTIN; D4i banks not yet probed. → [[DALI-Bench-Rig-And-Results]]
+
 ### Q8 — Can the LED driver device hold an autonomous fallback schedule?
 
 Fail-safe layer 3 depends on it. Without it, a dead slave falls straight through to the DALI System Failure Level — uncontrolled 100% all night. Needs an RTC, lat/long and a schedule table in the device developer's firmware. Spec 05 now makes this a testable obligation (DD-1…DD-4) and spec 03 §13 requires the schedule to run locally in every state. **Open until the device developer signs 03 and 05.** → [[Fail-Safe-Lighting-Rule]]
@@ -67,6 +69,8 @@ The primary DOE 2017 guidelines PDF was not retrievable; circulating figures are
 ### Q13 — DALI-2 frame settling timings
 
 Sources conflict (forward→backward 2.92–9.17 ms vs 5.5–10.5 ms; forward→forward ≥9.17 ms vs >13.5 ms). **Interim: wait the union** — receive window 2.9–11 ms, forward spacing ≥13.5 ms. → [[DALI-Fundamentals]]
+
+The bench can now measure a real driver's backward-frame delay from its RX timestamps. → [[DALI-Bench-Rig-And-Results]]
 
 ### Q23 — SX1276 is "not recommended for new designs"
 
@@ -107,6 +111,10 @@ Spec 00 uses `0x12` (private, not LoRaWAN's `0x34`). Confirm, or pick a site-spe
 ### Q34 — Should driver identity and D4i data travel over the radio?
 
 The v0.1 device REPORT has no field for the driver GTIN/serial or Part 253 diagnostics, only a `d4i_available` bit. Swaps are therefore auditable from the device UID, not the driver. Decide whether a periodic "driver info" report is worth the airtime. → [[DALI-Telemetry-And-D4i]]
+
+### Q35 — Does a dead device interrupt the DALI bus?
+
+Fail-safe layer 4 needs a dead device to interrupt the bus for longer than the ~550 ms System Failure time. On the bench, the interface releases the bus by itself within 10 ms and the bus supply runs independently of the MCU, so a halted MCU would leave the bus high and the driver at its last level. ⚠ Inferred from bench measurements, not yet tested. The device board must make bus loss follow MCU failure, for example with a bus supply enabled by a watchdog-refreshed signal. Spec 05 O-05-7. → [[DALI-Bench-Rig-And-Results]], [[Fail-Safe-Lighting-Rule]]
 
 ## Open — can wait
 
@@ -164,7 +172,7 @@ These were proposals in the wiki; the v0.1 specs now fix them (still subject to 
 
 - AN5554 FUOTA flash partitioning
 - Modbus-over-serial spec: the 150 Ω termination, 450–650 Ω polarisation range, and 1000 m-at-9600 figures
-- DALI-2 `System Failure Level` / `Power-On Level` exact semantics and the ~550 ms interruption threshold (secondary sources only)
+- DALI-2 `System Failure Level` / `Power-On Level` exact semantics and the ~550 ms interruption threshold (secondary sources only); testable on the bench by cutting the bus supply ([[DALI-Bench-Rig-And-Results]])
 - SX1276 blocking figures (secondary citation of the datasheet)
 - Coax loss figures per metre (typical manufacturer values)
 - Mean Well IRM series IEC 61000-4-5 surge immunity
@@ -185,5 +193,6 @@ These were proposals in the wiki; the v0.1 specs now fix them (still subject to 
 - 2026-09-09 — log started with Q1–Q20.
 - 2026-10-14 — Q2, Q3, Q6, Q22, Q25 resolved by the revised architecture; Q11, Q14, Q20 closed as superseded; Q21–Q27 added; radio profile decided under Q1.
 - 2026-10-21: aligned with spec pack v0.1 (Q28–Q34 added; Q7, Q8, Q17, Q18, Q21, Q24, Q26, Q27 annotated; settled-by-spec table added).
+- 2026-10-28: Q35 added (does a dead device interrupt the DALI bus); Q7 and Q13 annotated with bench results.
 
 Back to [[Index]]

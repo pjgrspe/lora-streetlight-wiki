@@ -17,6 +17,7 @@ DALI (IEC 62386) is the digital control interface between each per-pole LoRa LED
 - **250 mA max bus current**, limited by the bus power supply, so a shorted bus is a legal "logic 0", not damage.
 - **≤2 mA per control gear.** The 64-device limit is an **addressing** limit (6-bit short address), not electrical.
 - Free topology (bus, star, tree), **no ring**.
+- Bench, 2026-10-28: a 12 V supply through 150 Ω ran one driver but left about 11.8 V at it, just above the 11.5 V logic-high minimum. Size a real bus supply near 16 V. See [[DALI-Bench-Rig-And-Results]].
 
 ## Timing
 
@@ -31,6 +32,8 @@ DALI (IEC 62386) is the digital control interface between each per-pole LoRa LED
 A backward frame is optional: "no answer" is a distinct state, and **collision** (several responders) is another, used during addressing.
 
 ⚠ **Settling windows conflict between sources.** DALI-1-era: forward→backward 2.92–9.17 ms, forward→forward ≥9.17 ms. DALI-2 (Part 101 Ed.2/3) material: backward 5.5–10.5 ms, forward→forward >13.5 ms. Unverifiable without the paid standard. **Wait the union:** receive window 2.9–11 ms, forward spacing ≥13.5 ms.
+
+Measured through an opto-isolated interface, half-bits arrive as 357–388 µs low and 445–476 µs high: the optocouplers skew each edge by about 60 µs. A receiver should accept a wider window than 333–500 µs ([[DALI-Bench-Rig-And-Results]]).
 
 **Consequences:**
 
@@ -103,6 +106,7 @@ Lamp and gear failure are **decided inside the driver**; the controller cannot v
 - [[DALI-Telemetry-And-D4i]]
 - [[Street-Lighting-Control-Logic]]
 - [[Fail-Safe-Lighting-Rule]]
+- [[DALI-Bench-Rig-And-Results]]
 
 ## Sources
 
@@ -114,5 +118,6 @@ Lamp and gear failure are **decided inside the driver**; the controller cannot v
 - 2026-09-09: written for one DALI bus per section driven from a section controller.
 - 2026-10-14: system went per-pole; DALI links are now in-pole and run by the device developer's device. Timing and group sections adapted.
 - 2026-10-21: aligned with spec pack v0.1 (arc levels end to end, fail-safe levels 254, fade index 7–10).
+- 2026-10-28: bench measurements added: bus supply margin and optocoupler skew ([[DALI-Bench-Rig-And-Results]]).
 
 Back to [[Index]]
