@@ -1,5 +1,7 @@
 # Radio Hardware Selection
 
+> **Update 2026-11-02 (D-036):** the gateways use the **Ai-Thinker Ra-01SH (SX1262)**, the modules on hand, confirmed by the hardware dev. The devices stay SX1276. Driver: `lp_sx1262.c` behind `lp_port_t`; pins in spec 06 §3.2 (BUSY replaces DIO0). DIO2 drives the module's antenna switch; TXEN/RXEN unconnected. ⚠ Crystal, not TCXO. The SX1276 notes below still apply to the devices.
+
 The radio is the **Semtech SX1276**, chosen by the client, used on every gateway and device as a **915 MHz module**. This note covers what that choice means for the hardware and driver, and the alternatives that were considered.
 
 ## Key points
