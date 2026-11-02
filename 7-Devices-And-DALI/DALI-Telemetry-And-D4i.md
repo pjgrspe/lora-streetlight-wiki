@@ -80,6 +80,8 @@ Then:
 - The device sets `d4i_available` in its status bits, and uses Part 252 for its power and energy fields where the driver has it.
 - **Probe once, cache forever** for a given physical driver.
 
+**First real driver, on the bench (2026-10-28):** the LTECH SE-12-350-700-W1DS answered steps 1–3 as DT6, DALI-2 (version 0x08), with bank 0 giving firmware 2.0 and hardware 1.0 but **a blank GTIN** (all 0xFF), so identify drivers by the bank-0 identification number. Bank 1 exists; banks 202, 205 and 206 are not yet probed. It has no bus supply. See [[DALI-Bench-Rig-And-Results]].
+
 ## If the drivers are plain DALI-2 or DALI-1
 
 | Lost | Consequence |
@@ -127,6 +129,7 @@ US DOE/PNNL **PNNL-32949** tested 19 LED streetlight drivers: **9 of 19 non-comp
 - [[Energy-Metering-And-Telemetry-Contract]]
 - [[Commissioning-And-Field-Swap]]
 - [[Device-Identity-Namespaces]]
+- [[DALI-Bench-Rig-And-Results]]
 
 ## Sources
 
@@ -139,5 +142,6 @@ US DOE/PNNL **PNNL-32949** tested 19 LED streetlight drivers: **9 of 19 non-comp
 - 2026-09-13: existing off-the-shelf drivers chosen; note became a discovery and graceful-degradation design.
 - 2026-10-14: per-pole devices; discovery now runs on the device, with the gateways storing the result.
 - 2026-10-21: aligned with spec pack v0.1 (only a d4i_available bit on the radio; not-available sentinels instead of quality words; fade 7–10; fail-safe levels 254 with 250 option; driver identity open as Q34).
+- 2026-10-28: first real driver probed on the bench: DT6, DALI-2, blank GTIN, no bus supply ([[DALI-Bench-Rig-And-Results]]).
 
 Back to [[Index]]
