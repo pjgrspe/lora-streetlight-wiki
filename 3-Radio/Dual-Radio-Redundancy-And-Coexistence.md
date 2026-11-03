@@ -9,7 +9,7 @@ How the paired LoRa radios on each gateway work: two on the master, four on each
 - **A transmitting radio deafens every other radio in the same box.** One TX scheduler per box, with blanking windows. The master's tier-1 slot for each slave falls inside that slave's cell quiet window.
 - **Real independence needs separate SPI buses, resets, power rails, antennas and coax** for the two radios of a pair.
 - Dual radios cover radio, antenna, coax and narrowband-interference failures, **not loss of the whole box**. That's handled by autonomy and the fail-safe rule.
-- Channel plan: **2 tier-1 channels at opposite band edges + 2 per section**, inside 915–918 MHz. Airtime ledger **per box**.
+- Channel plan: **2 tier-1 channels in the 433 MHz band (D-040) + 2 per section** inside 915–918 MHz. Airtime ledger **per box**.
 
 ## Radio count
 
@@ -51,12 +51,12 @@ Tier-1 traffic is small (summaries and exceptions per section), so **the second 
 
 | Radio | Channel | Carries |
 |---|---|---|
-| A, primary | **ch 0, 915.2 MHz** (lowest band edge) | All scheduled tier-1 traffic |
-| B, exercised standby | **ch 13, 917.8 MHz** (opposite edge), for frequency diversity | **A heartbeat every cycle** from the master (every 5th cycle from each slave), so its health is always proven, plus **a duplicate of every P0 command** (emergency ON, `execute_at` group commands) |
+| A, primary | **ch 16, 433.175 MHz** (low end of the 433 band; was ch 0 at 915.2 MHz before D-040) | All scheduled tier-1 traffic |
+| B, exercised standby | **ch 23, 434.575 MHz** (1.4 MHz up; was ch 13 at 917.8 MHz), for frequency diversity | **A heartbeat every cycle** from the master (every 5th cycle from each slave), so its health is always proven, plus **a duplicate of every P0 command** (emergency ON, `execute_at` group commands) |
 
 - **A backup that is never exercised is a latent failure.** If radio B is only used when A dies, its dead coax is discovered at the worst moment. Heartbeating on both every cycle catches that.
 - **Duplicating P0 on both channels is cheap** (a few frames a day). Receivers deduplicate on `SEQ` ([[Custom-Protocol-Frame-Design]]).
-- **Failover:** after **3 consecutive missed exchanges** on A (or a failed radio self-test), B takes all traffic: the beacon moves to ch 13 and the heartbeat to ch 0, so A keeps being exercised. **Failback** only after A has been clean for **5 cycles (10 min)**, to avoid flapping. Both raise an alarm. Slots, timing and addresses don't change, only the channel.
+- **Failover:** after **3 consecutive missed exchanges** on A (or a failed radio self-test), B takes all traffic: the beacon moves to ch 23 and the heartbeat to ch 0, so A keeps being exercised. **Failback** only after A has been clean for **5 cycles (10 min)**, to avoid flapping. Both raise an alarm. Slots, timing and addresses don't change, only the channel.
 - **A dead standby is detected too:** no heartbeat heard on it for 3 cycles at a slave, or 10 at the master (each slave only sends one every 5th cycle), raises `STANDBY_RADIO_DOWN`.
 - **Load-sharing** (both radios carrying traffic all the time) doubles the state to debug and buys nothing on a lightly loaded tier.
 
@@ -84,7 +84,7 @@ Here the second radio **does** add capacity, because up to 60 devices share it.
 
 The project designs to the Philippine envelope: 915–918 MHz, 125 kHz channels, ≤16 dBm EIRP, ≤400 ms per TX, ≤1% duty ([[Philippines-Regulatory-Context]]).
 
-- **Channels:** the 200 kHz raster gives **14 channels** (915.2–917.8 MHz). Tier 1 uses ch 0 and ch 13. Section n uses **ch n and ch n+6**, 1.2 MHz apart so a slave's two receivers aren't on adjacent channels. Up to **6 sections** fit before pairs must be reused, which then depends on physical separation (spec 04).
+- **Channels:** the 200 kHz raster gives **14 channels** (915.2–917.8 MHz). Tier 1 used ch 0 and ch 13 until D-040 moved it to 433 MHz (ch 16 / 23); ch 0 and 13 are now free. Section n uses **ch n and ch n+6**, 1.2 MHz apart so a slave's two receivers aren't on adjacent channels. Up to **6 sections** fit before pairs must be reused, which then depends on physical separation (spec 04).
 - **Duty cycle:** it's unclear whether a 4-radio slave counts as one device (one shared 1% budget) or four. **The airtime ledger is kept per box** (the conservative reading) until NTC answers ([[Open-Questions]] Q21).
 
 ## Related
@@ -107,6 +107,7 @@ The project designs to the Philippine envelope: 915–918 MHz, 125 kHz channels,
 
 - 2026-10-14: Note created when the client specified dual radios on every gateway link.
 - 2026-10-14: Number of sections no longer fixed (channel need generalised to 2 + 2 per section); Philippine radio profile adopted.
+- 2026-11-03: D-040, tier 1 moved to 433 MHz (Ra-01SH with 433 matching parts). A slave's up and down radios are now in different bands, so they don't deafen each other; the same-band pairs (D1/D2 at 915, U1/U2 at 433) still can. Bench exp. 3 (same band): 30 cm erratic, 60 cm clean. Closes I-012.
 - 2026-10-21: aligned with spec pack v0.1. Concrete channels (tier 1 ch 0/ch 13, section n ch n/ch n+6, 14 channels); failover after 3 missed exchanges, failback after 5 clean cycles; standby-down detection; device moves channel after 2 missed beacons; single-channel mode shifts the cell cycle.
 
 Back to [[Index]]
