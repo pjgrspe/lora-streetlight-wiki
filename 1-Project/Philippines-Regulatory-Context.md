@@ -4,7 +4,7 @@ The radio rules the system is designed to, and what is still unconfirmed. The pr
 
 ## Key points
 
-- **Band: 915–918 MHz for the cells** (NTC allocation; LoRa Alliance AS923-3 for the Philippines). **Tier 1 (Master ↔ Slave) on 433 MHz since D-040** (2026-11-03), at 10 mW ERP. Not 868 MHz, not US 902–928 MHz.
+- **Band: 915–918 MHz** (NTC allocation; LoRa Alliance AS923-3 for the Philippines). Not 868 MHz, not US 902–928 MHz, not 433 MHz.
 - **Working profile:** 125 kHz channels on a 200 kHz raster (**14 channels, 915.2–917.8 MHz**), **≤16 dBm EIRP**, **≤400 ms per transmission** (SF7–SF10 only), **≤1% duty cycle accounted per box**.
 - Band, channel plan and TX power are **configuration parameters** with a compile-time regional ceiling — a different NTC answer is a config change, not a rewrite.
 - ⚠ **Not settled:** whether the band is licence-exempt, and NTC's confirmed EIRP/duty/dwell figures. **The letter to NTC is still required.**
@@ -16,7 +16,7 @@ The radio rules the system is designed to, and what is still unconfirmed. The pr
 |---|---|
 | Band | 915–918 MHz (3 MHz) |
 | Channel width / raster | 125 kHz on 200 kHz spacing, 14 channels (915.2–917.8 MHz) |
-| Channel use | Section n on ch n + ch n+6 ([[Dual-Radio-Redundancy-And-Coexistence]]). Ch 0 and 13 free. Tier 1 on a 433 MHz raster: ch 16 (433.175) + ch 23 (434.575) (D-040) |
+| Channel use | Tier 1 on ch 0 (915.2) + ch 13 (917.8); section n on ch n + ch n+6 ([[Dual-Radio-Redundancy-And-Coexistence]]) |
 | Max EIRP | 16 dBm (antenna gain counts) |
 | Max single transmission | 400 ms → SF7–SF10 allowed; v1 uses SF7–SF9; SF11/SF12 unusable ([[LoRa-Airtime-Budget]]) |
 | Duty cycle | ≤1%, ledger kept per box (multi-radio treatment unconfirmed — [[Open-Questions]] Q21) |
@@ -40,7 +40,9 @@ Because the channel plan grows by two per section, the section count ([[Open-Que
 
 **LoRa Alliance RP002-1.0.3 Table 1** lists `Philippines (PH) | 915–918 MHz | AS923-3`. AS923-3 has a −6.60 MHz offset, so its default channels are **916.6 and 916.8 MHz**, 125 kHz, DR0–DR5, duty cycle <1%, default max EIRP **16 dBm**.
 
-US-style 902–928 MHz is not available. 433 MHz exists under MC 03-05-2007 but at only **10 mW e.r.p.** (12 dBm EIRP, 4 dB below the 915 MHz working limit) and is shared with amateur radiolocation and ISM heating. The hardware dev chose it for tier 1 anyway (D-040): it separates a slave's up and down radios by band, and its lower path loss (about 6.6 dB at the same distance) more than covers the lower power. ⚠ The 433 MHz band edges (433.05–434.79 MHz) and duty cycle still need NTC confirmation (spec 04 O-04-5).
+US-style 902–928 MHz is not available. 433 MHz exists under MC 03-05-2007 but at only **10 mW e.r.p.** (~10 dB handicap) and is shared with amateur radiolocation and ISM heating.
+
+**433 MHz for tier 1 was decided and withdrawn on 2026-11-03** (D-040, then D-041). The site is at Subic, where 433 MHz would need base spectrum clearance ⚠, and one band means one module, antenna and matching design. Everything stays on 915–918 MHz.
 
 ## What could not be verified ⚠
 

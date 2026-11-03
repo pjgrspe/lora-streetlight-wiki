@@ -52,9 +52,9 @@ CAD correlates received samples against the ideal preamble chirp, detecting LoRa
 
 ```
 Master time (s), cycle = 120 s
-0.0      BEACON on the active channel (ch 16): time, cycle number, config version,
+0.0      BEACON on the active channel (ch 0): time, cycle number, config version,
          ACK bitmap for last cycle's slave summaries
-0.5      HEARTBEAT on the standby channel (ch 23), every cycle
+0.5      HEARTBEAT on the standby channel (ch 13), every cycle
 1.0–2.0  contention window: urgent slave events, slave joins
 2 + 2(n−1)  slot of slave n, 2 s each, in GwID order:
          SUMMARY up → optional ACK/CMD down → optional DETAIL/EVENT/FRAG up → optional ACK down

@@ -80,7 +80,7 @@ On separate channels the tiers run concurrently, and each channel's occupancy st
 
 | Link | Channels | SF |
 |---|---|---|
-| Tier 1: Master ↔ Slaves | ch 16 (433.175 MHz, primary) + ch 23 (434.575 MHz, standby), D-040 | SF7 (SF8 allowed) |
+| Tier 1: Master ↔ Slaves | ch 0 (primary) + ch 13 (standby), opposite band edges | SF7 (SF8 allowed) |
 | Tier 2: each Slave ↔ its devices | ch n + ch n+6 for section n, both active | SF9 (SF7–SF9, one per cell) |
 
 ## Airtime accounting rules
